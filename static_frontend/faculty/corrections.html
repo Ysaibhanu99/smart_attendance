@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance Corrections — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('faculty', 'Corrections', 'corrections.html');
+  renderPage();
+});
+
+function renderPage() {
+  const user = Session.get() || APP_DATA.session.faculty;
+  
+  // Filter audit logs to show only those modified by this faculty member
+  // (In data.js, the mock data has `by: 'Prof. John Doe'`)
+  const myCorrections = APP_DATA.auditLogs.filter(log => log.by === user.name);
+  
+  const historyRows = myCorrections.map(log => `
+    <tr>
+      <td>${log.ts.split(' ')[0]}</td>
+      <td><strong>${log.student}</strong></td>
+      <td>${log.subject}</td>
+      <td>
+        <span class="badge badge-warning">${log.old}</span> 
+        <i class="fa-solid fa-arrow-right" style="margin:0 5px;font-size:10px;color:var(--text-muted)"></i> 
+        <span class="badge badge-success">${log.new}</span>
+      </td>
+      <td style="color:var(--text-secondary)">${log.reason}</td>
+    </tr>
+  `).join('');
+
+  // Dropdown for students
+  const studentOptions = APP_DATA.attendanceStudents.map(s => `<option value="${s.roll}">${s.roll} - ${s.name}</option>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Attendance Corrections</h1>
+      <p class="page-subtitle">Fix mistakes or update attendance for latecomers.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Correction Form -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-pen-to-square" style="color:var(--accent-blue);margin-right:6px"></i>Submit Correction</span>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">
+            Note: All corrections are logged in the system audit trail and are visible to the HOD.
+          </p>
+          <form onsubmit="event.preventDefault(); flashMessage('Correction applied successfully and logged.', 'success');">
+            <div class="form-group" style="display:flex;gap:12px">
+              <div style="flex:1">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-control" required />
+              </div>
+              <div style="flex:1">
+                <label class="form-label">Period</label>
+                <select class="form-control" required>
+                  <option value="">Select Period</option>
+                  <option value="1">Period 1 (9:00 AM)</option>
+                  <option value="2">Period 2 (10:00 AM)</option>
+                  <option value="3">Period 3 (11:00 AM)</option>
+                  <option value="4">Period 4 (12:00 PM)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Student</label>
+              <select class="form-control" required>
+                <option value="">Select Student...</option>
+                ${studentOptions}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Change Status To</label>
+              <select class="form-control" required>
+                <option value="">Select New Status</option>
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
+                <option value="excused">Excused (On-Duty)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reason for Correction</label>
+              <textarea class="form-control" rows="2" placeholder="e.g., Student arrived late due to bus delay but was present." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-check"></i> Apply Correction</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Recent Corrections -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-purple);margin-right:6px"></i>My Recent Corrections</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Student</th><th>Subject</th><th>Change</th><th>Reason</th></tr></thead>
+            <tbody>${historyRows || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No recent corrections.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

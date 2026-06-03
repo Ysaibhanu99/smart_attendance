@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/charts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('student', 'My Attendance', 'dashboard.html');
+  renderPage();
+});
+
+function subjectRow(s, extraCol) {
+  const safety = s.pct >= s.threshold + 5 ? 'safe' : s.pct >= s.threshold ? 'warn' : 'danger';
+  const badge  = s.pct >= s.threshold + 5
+    ? '<span class="badge badge-success">Safe</span>'
+    : s.pct >= s.threshold
+    ? '<span class="badge badge-warning">On Edge</span>'
+    : '<span class="badge badge-danger">At Risk</span>';
+  const typeTag = s.type === 'Lab'
+    ? '<span class="badge badge-purple">Lab</span>'
+    : s.dept
+    ? `<span class="badge" style="background:rgba(6,182,212,0.12);color:var(--accent-cyan)">${s.dept}</span>`
+    : '<span class="badge badge-neutral">Theory</span>';
+
+  return `
+    <tr>
+      <td><strong>${s.name}</strong></td>
+      <td>${typeTag}</td>
+      ${extraCol ? `<td style="color:var(--text-muted)">${extraCol}</td>` : ''}
+      <td style="color:var(--text-muted)">${s.threshold}%</td>
+      <td>${s.present}</td>
+      <td>${s.total}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill ${safety}" style="width:${s.pct}%" data-width="${s.pct}%"></div></div>
+          <span class="progress-pct">${s.pct}%</span>
+        </div>
+      </td>
+      <td>${badge}</td>
+    </tr>`;
+}
+
+function renderPage() {
+  const user = Session.get() || APP_DATA.session.student;
+  const s    = APP_DATA.studentStats;
+  const overallColor = s.overall_pct >= 80 ? 'var(--accent-green)' : s.overall_pct >= 75 ? 'var(--accent-amber)' : 'var(--accent-red)';
+
+  const majorRows = APP_DATA.majorSubjects.map(s => subjectRow(s, null)).join('');
+  const minorRows = APP_DATA.minorSubjects.map(s => subjectRow(s, s.dept)).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <!-- Student header card -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <div class="user-avatar" style="width:56px;height:56px;font-size:22px;flex-shrink:0">${user.avatar}</div>
+      <div style="flex:1">
+        <h2 style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--text-primary)">${user.name}</h2>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">Roll: <strong>${user.roll || '22BCA018'}</strong> · CSE · Year 2 · Section A</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-head);font-size:28px;font-weight:800;color:${overallColor}">${s.overall_pct}%</div>
+        <div style="font-size:12px;color:var(--text-muted)">Overall Attendance</div>
+      </div>
+    </div>
+
+    <!-- Marks Summary Teaser -->
+    <div style="background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(6,182,212,0.05));border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:42px;height:42px;background:rgba(59,130,246,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--accent-blue);font-size:18px"><i class="fa-solid fa-graduation-cap"></i></div>
+        <div>
+          <div style="font-weight:600;color:var(--text-primary)">Your Latest Marks</div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">Internal 1 & 2 published for 5 subjects. Mid-Term results pending.</div>
+        </div>
+      </div>
+      <a href="marks.html" class="btn btn-primary"><i class="fa-solid fa-graduation-cap"></i> View My Marks</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" style="margin-bottom:24px">
+      <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-book"></i></div><div class="stat-value">${APP_DATA.majorSubjects.length + APP_DATA.minorSubjects.length}</div><div class="stat-label">Subjects</div></div>
+      <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><div class="stat-value">${s.total_present}</div><div class="stat-label">Classes Attended</div></div>
+      <div class="stat-card red"><div class="stat-icon red"><i class="fa-solid fa-circle-xmark"></i></div><div class="stat-value">${s.total_absent}</div><div class="stat-label">Classes Missed</div></div>
+      <div class="stat-card amber"><div class="stat-icon amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-value">${s.at_risk_count}</div><div class="stat-label">At-Risk Subjects</div></div>
+    </div>
+
+    <!-- Tabs container -->
+    <div class="tabs-container" style="margin-bottom:20px">
+      <div class="tabs">
+        <button class="tab-btn">Major Papers</button>
+        <button class="tab-btn">Minor Papers</button>
+      </div>
+
+      <div class="tab-content">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Major Papers — CSE</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Subject</th><th>Type</th><th>Threshold</th><th>Present</th><th>Total</th><th>Attendance</th><th>Status</th></tr></thead>
+              <tbody>${majorRows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Minor Papers — Cross Department</span><span class="badge badge-info">ECE Minor</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Subject</th><th>Type</th><th>Dept</th><th>Threshold</th><th>Present</th><th>Total</th><th>Attendance</th><th>Status</th></tr></thead>
+              <tbody>${minorRows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semester chart -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--accent-blue);margin-right:6px"></i>Semester Progress</span>
+        <span style="font-size:12px;color:var(--text-muted)">Your attendance vs class average</span>
+      </div>
+      <div class="card-body"><div class="chart-wrap" style="height:240px"><canvas id="semesterChart"></canvas></div></div>
+    </div>
+
+    <!-- Apply Leave CTA -->
+    <div style="background:rgba(59,130,246,0.05);border:1px dashed rgba(59,130,246,0.3);border-radius:var(--radius-lg);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-weight:600;color:var(--text-primary)">Need to apply for leave?</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">Submit medical or official leave — HOD will review it.</div>
+      </div>
+      <a href="apply-leave.html" class="btn btn-primary"><i class="fa-solid fa-file-circle-plus"></i> Apply for Leave</a>
+    </div>
+  `;
+
+  // Init tabs + charts
+  initTabs();
+  applyChartDefaults();
+  renderSemesterProgressChart('semesterChart',
+    ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+    [85,82,80,75,78,76,78,78],
+    [84,83,85,82,84,83,85,84]
+  );
+  animateProgressBars();
+}
+</script>
+</body>
+</html>

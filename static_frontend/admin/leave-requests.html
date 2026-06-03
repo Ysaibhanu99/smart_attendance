@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave Requests — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('admin', 'Leave Requests', 'leave-requests.html');
+  renderPage();
+});
+
+function renderPage() {
+  const getBadgeClass = (type) => {
+    if (type === 'Medical') return 'badge-danger';
+    if (type === 'Official') return 'badge-purple';
+    return 'badge-info';
+  };
+
+  const rows = APP_DATA.leaveRequests.map((req, idx) => `
+    <tr id="req-row-${idx}">
+      <td><strong>${req.name}</strong></td>
+      <td><span class="badge ${getBadgeClass(req.type)}">${req.type}</span></td>
+      <td>${req.from} <i class="fa-solid fa-arrow-right" style="font-size:10px;color:var(--text-muted);margin:0 4px"></i> ${req.to}</td>
+      <td style="color:var(--text-secondary);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${req.reason}">${req.reason}</td>
+      <td>
+        ${req.status === 'pending' ? `
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="addAttendance(${idx}, '${req.type}')"><i class="fa-solid fa-calendar-plus"></i> Add Attendance</button>
+          </div>
+        ` : `<span class="badge badge-primary" style="background-color: var(--accent-blue); color: #fff;">Attendance Added (${req.type})</span>`}
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Pending Leave Requests</h1>
+      <p class="page-subtitle">Review and manage student leave applications for the college.</p>
+    </div>
+
+    <!-- Smart Suggestion / AI Box Example -->
+    <div class="ai-box" style="margin-bottom:24px">
+      <div class="ai-label"><i class="fa-solid fa-microchip-ai"></i> Smart Analysis</div>
+      <div class="ai-content">
+        <strong>Sneha Iyer</strong> has requested an Official leave on <strong>Mar 14</strong>. This coincides with the "College Tech Symposium". 
+        <br><span style="color:var(--text-muted);font-size:12px;margin-top:4px;display:inline-block">Suggestion: High probability of valid request.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-inbox" style="color:var(--accent-blue);margin-right:6px"></i>Needs Action</span>
+        <span class="badge badge-warning" style="margin-left:auto">${APP_DATA.hodStats.pending_leaves} Pending</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Student</th><th>Leave Type</th><th>Duration</th><th>Reason</th><th>Action</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No pending requests.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// Function to handle clicking add attendance (Simulates UI update)
+window.addAttendance = function(idx, reason) {
+  const row = document.getElementById(`req-row-${idx}`);
+  flashMessage(`Attendance marked based on ${reason} leave.`, 'success');
+  row.querySelector('td:last-child').innerHTML = `<span class="badge badge-primary" style="background-color: var(--accent-blue); color: #fff;">Attendance Added (${reason})</span>`;
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College Analytics — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/charts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('admin', 'College Analytics', 'analytics.html');
+  renderPage();
+});
+
+function renderPage() {
+  const s = APP_DATA.adminStats;
+  
+  // Extract department data for charts and table
+  const deptNames = APP_DATA.departments.map(d => d.name);
+  const deptAvgs = APP_DATA.departments.map(d => d.avg);
+  
+  const deptRows = APP_DATA.departments.map(d => `
+    <tr>
+      <td><strong>${d.name}</strong></td>
+      <td style="color:var(--text-secondary)">${d.hod}</td>
+      <td>${d.students}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill ${d.avg < 75 ? 'danger' : 'primary'}" style="width:${d.avg}%"></div></div>
+          <span class="progress-pct" style="${d.avg < 75 ? 'color:var(--accent-red)' : ''}">${d.avg}%</span>
+        </div>
+      </td>
+      <td><span class="badge ${d.at_risk > 20 ? 'badge-danger' : 'badge-warning'}">${d.at_risk} Students</span></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Institution Overview</h1>
+      <p class="page-subtitle">College-wide attendance analytics and performance metrics.</p>
+    </div>
+
+    <!-- Top Stats -->
+    <div class="stats-grid" style="margin-bottom:24px">
+      <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-building-columns"></i></div><div class="stat-value">${s.departments}</div><div class="stat-label">Departments</div></div>
+      <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-users"></i></div><div class="stat-value">${s.students}</div><div class="stat-label">Total Students</div></div>
+      <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-percent"></i></div><div class="stat-value">${s.avg_attendance}%</div><div class="stat-label">Overall Average</div></div>
+      <div class="stat-card amber"><div class="stat-icon amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-value">${s.at_risk}</div><div class="stat-label">Total At-Risk</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-chart-area" style="color:var(--accent-purple);margin-right:6px"></i>6-Month Attendance Trend</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="adminTrendChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-chart-column" style="color:var(--accent-cyan);margin-right:6px"></i>Department Comparison</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="adminDeptChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="card-title"><i class="fa-solid fa-table" style="color:var(--accent-blue);margin-right:6px"></i>Department Breakdown</span>
+        <button class="btn btn-ghost btn-sm" onclick="flashMessage('Exporting College Report...', 'success')"><i class="fa-solid fa-download"></i> Download CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Department</th><th>HOD Name</th><th>Total Students</th><th>Avg Attendance</th><th>At-Risk Count</th></tr></thead>
+          <tbody>${deptRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Initialize Charts
+  if (typeof applyChartDefaults === 'function') applyChartDefaults();
+  
+  if (typeof renderFacultyTrendChart === 'function') {
+    renderFacultyTrendChart('adminTrendChart', ['Jan','Feb','Mar','Apr','May','Jun'], [81, 83, 85, 78, 82, 86]);
+  }
+  if (typeof renderSubjectBarChart === 'function') {
+    renderSubjectBarChart('adminDeptChart', deptNames, deptAvgs);
+  }
+}
+</script>
+</body>
+</html>

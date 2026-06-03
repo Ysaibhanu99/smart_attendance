@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/charts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('admin', 'Admin Dashboard', 'dashboard.html');
+  renderPage();
+});
+
+function renderPage() {
+  const d = APP_DATA;
+  const s = d.adminStats;
+
+  const badgeClass = pct => pct >= 80 ? 'safe' : pct >= 75 ? 'warn' : 'danger';
+  const atRiskBadge = n => n > 20 ? 'badge-danger' : n > 10 ? 'badge-warning' : 'badge-success';
+
+  const deptRows = d.departments.map(dept => `
+    <tr>
+      <td><strong>${dept.name}</strong></td>
+      <td style="color:var(--text-secondary)">${dept.hod}</td>
+      <td>${dept.students}</td>
+      <td>${dept.faculty}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill ${badgeClass(dept.avg)}" style="width:${dept.avg}%"></div></div>
+          <span class="progress-pct">${dept.avg}%</span>
+        </div>
+      </td>
+      <td><span class="badge ${atRiskBadge(dept.at_risk)}">${dept.at_risk}</span></td>
+      <td><span class="badge badge-success">Active</span></td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">College Overview</h1>
+      <p class="page-subtitle">Academic Year 2024–25 · Semester II</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-icon blue"><i class="fa-solid fa-building"></i></div>
+        <div class="stat-value">${s.departments}</div>
+        <div class="stat-label">Departments</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon green"><i class="fa-solid fa-user-graduate"></i></div>
+        <div class="stat-value">${s.students}</div>
+        <div class="stat-label">Students</div>
+        <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> +42 this semester</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon purple"><i class="fa-solid fa-chalkboard-user"></i></div>
+        <div class="stat-value">${s.faculty}</div>
+        <div class="stat-label">Faculty</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="stat-value">${s.at_risk}</div>
+        <div class="stat-label">At-Risk Students</div>
+      </div>
+      <div class="stat-card cyan">
+        <div class="stat-icon cyan"><i class="fa-solid fa-percent"></i></div>
+        <div class="stat-value">${s.avg_attendance}%</div>
+        <div class="stat-label">College Avg</div>
+        <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> +3% vs last month</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-icon amber"><i class="fa-solid fa-calendar-xmark"></i></div>
+        <div class="stat-value">${s.holidays}</div>
+        <div class="stat-label">Holidays This Sem</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-building" style="color:var(--accent-blue);margin-right:6px"></i>Department Attendance</span>
+        </div>
+        <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="deptChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-circle-half-stroke" style="color:var(--accent-amber);margin-right:6px"></i>Risk Distribution</span>
+        </div>
+        <div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="riskDonut"></canvas></div></div>
+      </div>
+    </div>
+
+    <div style="background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(6,182,212,0.05));border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:42px;height:42px;background:rgba(59,130,246,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--accent-blue);font-size:18px"><i class="fa-solid fa-graduation-cap"></i></div>
+        <div>
+          <div style="font-weight:600;color:var(--text-primary)">Marks Overview</div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">Internal 1 & 2 published across most departments. Mid-Term entry in progress.</div>
+        </div>
+      </div>
+      <a href="marks.html" class="btn btn-primary"><i class="fa-solid fa-graduation-cap"></i> View Marks Overview</a>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--accent-green);margin-right:6px"></i>Monthly Trend</span>
+        </div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-bolt" style="color:var(--accent-amber);margin-right:6px"></i>Quick Actions</span>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+          <a href="users.html" class="btn btn-primary" style="justify-content:flex-start"><i class="fa-solid fa-user-plus"></i> Add New User</a>
+          <a href="holidays.html" class="btn btn-ghost" style="justify-content:flex-start"><i class="fa-solid fa-calendar-plus"></i> Mark Holiday</a>
+          <a href="audit-logs.html" class="btn btn-ghost" style="justify-content:flex-start"><i class="fa-solid fa-scroll"></i> View Audit Logs</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Department Summary</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Department</th><th>HOD</th><th>Students</th><th>Faculty</th><th>Avg Attendance</th><th>At Risk</th><th>Status</th></tr>
+          </thead>
+          <tbody>${deptRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Charts
+  applyChartDefaults();
+  renderDeptComparisonChart('deptChart', d.departments.map(x=>x.name), d.departments.map(x=>x.avg));
+  renderAtRiskDonut('riskDonut', 980, 173, 87);
+  renderAttendanceTrendChart('trendChart',
+    ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+    [{ label:'College Avg', data:[78,80,82,79,81,83,82,84] }]
+  );
+  animateProgressBars();
+}
+</script>
+</body>
+</html>

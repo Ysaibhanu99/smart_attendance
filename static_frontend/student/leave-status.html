@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave Status — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('student', 'Leave Status', 'leave-status.html');
+  renderPage();
+});
+
+function renderPage() {
+  const user = Session.get() || APP_DATA.session.student;
+
+  // Filter pending requests for this student (mock logic)
+  let myPending = APP_DATA.leaveRequests.filter(req => req.name === user.name);
+  if (myPending.length === 0) {
+    // Inject a fake pending request for UI demonstration if none matches their specific name
+    myPending = [ { type: 'Personal', from: '2025-05-15', to: '2025-05-16', reason: 'Family Function outside the city', status: 'pending' } ];
+  }
+
+  const getBadgeClass = (type) => {
+    if (type === 'Medical') return 'badge-danger';
+    if (type === 'Official') return 'badge-purple';
+    return 'badge-info';
+  };
+
+  const getStatusBadge = (status) => {
+    if (status === 'approved') return '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Attendance Added</span>';
+    if (status === 'rejected') return '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Request Denied</span>';
+    return '<span class="badge badge-warning"><i class="fa-solid fa-clock"></i> Pending Processing</span>';
+  };
+
+  const pendingRows = myPending.map(req => `
+    <tr>
+      <td><span class="badge ${getBadgeClass(req.type)}">${req.type}</span></td>
+      <td>${req.from} to ${req.to}</td>
+      <td style="color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${req.reason}">${req.reason}</td>
+      <td>${getStatusBadge(req.status)}</td>
+      <td><button class="btn btn-ghost btn-sm" style="color:var(--accent-red)" onclick="flashMessage('Leave application withdrawn successfully.', 'success')">Withdraw</button></td>
+    </tr>
+  `).join('');
+
+  const historyRows = APP_DATA.pastLeaves.map(req => `
+    <tr>
+      <td><span class="badge ${getBadgeClass(req.type)}">${req.type}</span></td>
+      <td>${req.from} to ${req.to}</td>
+      <td>${getStatusBadge(req.status)}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Leave Applications</h1>
+      <p class="page-subtitle">Track the status of your current requests and view your past leave history.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Pending Requests -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-spinner fa-spin-pulse" style="color:var(--accent-amber);margin-right:6px"></i>Active Requests</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Type</th><th>Dates</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>${pendingRows || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No active requests.</td></tr>'}</tbody>
+          </table>
+        </div>
+        <div class="card-body" style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px;">
+           <button class="btn btn-primary" onclick="window.location.href='apply-leave.html'" style="width:100%"><i class="fa-solid fa-plus"></i> New Leave Application</button>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-folder-open" style="color:var(--accent-blue);margin-right:6px"></i>Past Leaves</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Type</th><th>Dates</th><th>Final Status</th></tr></thead>
+            <tbody>${historyRows || '<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">No history found.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

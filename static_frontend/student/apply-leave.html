@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apply for Leave — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('student', 'Apply for Leave', 'apply-leave.html');
+  renderPage();
+});
+
+function renderPage() {
+  const subjects = APP_DATA.majorSubjects.map(s => s.name).concat(APP_DATA.minorSubjects.map(s => s.name));
+  const today = new Date().toISOString().split('T')[0];
+
+  const historyRows = APP_DATA.pastLeaves.map(r => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text-primary)">${r.type}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${r.from} → ${r.to}</div>
+      </div>
+      <span class="badge ${r.status==='approved'?'badge-success':r.status==='rejected'?'badge-danger':'badge-warning'}">
+        ${r.status==='approved'?'Attendance Added':r.status==='rejected'?'Denied':r.status==='pending'?'Pending':r.status}
+      </span>
+    </div>`).join('');
+
+  const subjectCheckboxes = subjects.map(s => `
+    <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;cursor:pointer;color:var(--text-secondary)">
+      <input type="checkbox" name="subjects" value="${s}" style="width:auto;accent-color:var(--accent-blue)" />
+      ${s}
+    </label>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Apply for Leave</h1>
+      <p class="page-subtitle">Submit medical or official leave to request attendance based on your reason</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Form -->
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-file-circle-plus" style="color:var(--accent-blue);margin-right:6px"></i>Leave Request Form</span></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>Leave Type</label>
+            <select id="leaveType">
+              <option value="medical">Medical Leave</option>
+              <option value="official">Official Leave</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>From Date</label><input type="date" id="fromDate" max="${today}" /></div>
+            <div class="form-group"><label>To Date</label><input type="date" id="toDate" max="${today}" /></div>
+          </div>
+          <div class="form-group">
+            <label>Reason</label>
+            <textarea id="leaveReason" rows="3" placeholder="Briefly describe your reason..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Subjects Affected</label>
+            <div style="display:flex;flex-direction:column;gap:6px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+              ${subjectCheckboxes}
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="submitLeave()">
+            <i class="fa-solid fa-paper-plane"></i> Submit Leave Request
+          </button>
+        </div>
+      </div>
+
+      <!-- Info + History -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fa-solid fa-circle-info" style="color:var(--accent-cyan);margin-right:6px"></i>How It Works</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            ${[
+              'Submit leave request with dates and reason.',
+              'Your HOD reviews your request and processes attendance based on your leave reason.',
+              'Once processed, your attendance is added based on the specific leave type. Attendance % is protected.'
+            ].map((t,i) => `
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:24px;height:24px;background:rgba(59,130,246,0.12);color:var(--accent-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</div>
+                <div style="font-size:13px;color:var(--text-secondary)">${t}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">My Leave History</span></div>
+          <div>${historyRows}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Date validation
+  document.getElementById('fromDate').addEventListener('change', () => {
+    document.getElementById('toDate').setAttribute('min', document.getElementById('fromDate').value);
+  });
+}
+
+function submitLeave() {
+  const from   = document.getElementById('fromDate').value;
+  const to     = document.getElementById('toDate').value;
+  const reason = document.getElementById('leaveReason').value.trim();
+
+  if (!from || !to || !reason) { showToast('Fill in all required fields.', 'error'); return; }
+  if (to < from) { showToast('To date cannot be before From date.', 'error'); return; }
+
+  confirmAction('Submit this leave request?', () => {
+    // Add to history
+    APP_DATA.pastLeaves.unshift({
+      type: document.getElementById('leaveType').value === 'medical' ? 'Medical' : 'Official',
+      from: new Date(from).toLocaleDateString('en-IN', { day:'numeric', month:'short' }),
+      to:   new Date(to).toLocaleDateString('en-IN', { day:'numeric', month:'short' }),
+      status: 'pending'
+    });
+    showToast('Leave request submitted — pending HOD processing.', 'success');
+    setTimeout(() => window.location.href = 'dashboard.html', 1500);
+  });
+}
+</script>
+</body>
+</html>

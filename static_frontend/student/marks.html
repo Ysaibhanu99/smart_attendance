@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Marks — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <style>
+    .marks-header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .marks-header h1 { font-family: var(--font-head); font-size: 20px; color: #fff; margin-bottom: 4px; }
+    .marks-header p { color: rgba(255,255,255,0.6); font-size: 13px; }
+    .exam-pill {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+      padding: 4px 10px; border-radius: 20px; font-weight: 500;
+    }
+    .exam-pill.published  { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+    .exam-pill.pending    { background: rgba(100,116,139,0.12); color: var(--text-muted); border: 1px solid rgba(100,116,139,0.2); }
+    .subject-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 16px; overflow: hidden; }
+    .subject-card-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+    .subject-name { font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .subject-type-badge { font-size: 11px; padding: 3px 9px; border-radius: 12px; }
+    .exam-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0; }
+    .exam-cell { padding: 18px 20px; border-right: 1px solid var(--border); }
+    .exam-cell:last-child { border-right: none; }
+    .exam-cell .exam-name { font-size: 11px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .exam-cell .marks-value { font-family: var(--font-head); font-size: 26px; font-weight: 800; }
+    .exam-cell .marks-max  { font-size: 13px; color: var(--text-muted); }
+    .grade-chip {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 8px; margin-top: 6px;
+    }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('student', 'My Marks', 'marks.html');
+  renderPage();
+});
+
+function getGrade(marks, max) {
+  if (marks === null) return null;
+  const pct = (marks / max) * 100;
+  for (const g of APP_DATA.gradeConfig) {
+    if (pct >= g.min) return g;
+  }
+  return APP_DATA.gradeConfig[APP_DATA.gradeConfig.length - 1];
+}
+
+function renderPage() {
+  const user = Session.get() || APP_DATA.session.student;
+  const marks = APP_DATA.studentMarks;
+
+  const typeColor = { Theory: 'var(--accent-blue)', Lab: 'var(--accent-purple)', Minor: 'var(--accent-cyan)' };
+  const typeBg   = { Theory: 'rgba(59,130,246,0.12)', Lab: 'rgba(168,85,247,0.12)', Minor: 'rgba(6,182,212,0.12)' };
+
+  const subjectCards = marks.map(sub => {
+    const examCells = sub.exams.map(e => {
+      const g = getGrade(e.marks, e.max);
+      const isPublished = e.marks !== null;
+      return `
+        <div class="exam-cell">
+          <div class="exam-name">${e.exam}</div>
+          ${isPublished ? `
+            <div class="marks-value" style="color:${g.color}">${e.marks}</div>
+            <div class="marks-max">/ ${e.max}</div>
+            <span class="grade-chip" style="background:${g.color}18;color:${g.color}">${g.grade} — ${g.label}</span>
+          ` : `
+            <div class="marks-value" style="color:var(--text-muted)">—</div>
+            <div class="marks-max" style="color:var(--text-muted)">/ ${e.max}</div>
+            <span class="exam-pill pending"><i class="fa-regular fa-clock"></i> Pending</span>
+          `}
+        </div>`;
+    }).join('');
+
+    const publishedCount = sub.exams.filter(e => e.marks !== null).length;
+
+    return `
+      <div class="subject-card">
+        <div class="subject-card-header">
+          <div>
+            <div class="subject-name">${sub.subject}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:3px">Max Marks: ${sub.maxMarks} per exam</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="subject-type-badge" style="background:${typeBg[sub.type]};color:${typeColor[sub.type]}">${sub.type}</span>
+            <span class="exam-pill published"><i class="fa-solid fa-check"></i> ${publishedCount}/4 Published</span>
+          </div>
+        </div>
+        <div class="exam-grid">${examCells}</div>
+      </div>`;
+  }).join('');
+
+  const legendItems = APP_DATA.gradeConfig.map(g =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${g.color}"></div>${g.grade} — ${g.label}</div>`
+  ).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="marks-header">
+      <div>
+        <h1><i class="fa-solid fa-graduation-cap" style="margin-right:8px;color:#a78bfa"></i>My Academic Marks</h1>
+        <p>${user.name} · Roll: ${user.roll || '22BCA018'} · CSE · Semester II · 2024–25</p>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:4px">Exams Completed</div>
+        <div style="font-family:var(--font-head);font-size:28px;font-weight:800;color:#a78bfa">2 / 4</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><span class="card-title"><i class="fa-solid fa-circle-info" style="color:var(--accent-blue);margin-right:6px"></i>Grade Legend</span></div>
+      <div class="card-body">
+        <div class="legend-row">${legendItems}</div>
+        <div style="font-size:12px;color:var(--text-muted)"><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-amber);margin-right:4px"></i>Marks below 40% are graded <strong style="color:var(--accent-red)">F (Fail)</strong>. Contact your faculty for re-evaluation queries.</div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text-primary)">
+        <i class="fa-solid fa-list-check" style="margin-right:6px;color:var(--accent-blue)"></i>Subject-wise Marks
+      </div>
+      ${subjectCards}
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

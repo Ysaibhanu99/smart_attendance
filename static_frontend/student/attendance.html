@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance Details — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('student', 'Attendance Details', 'attendance.html');
+  renderPage();
+});
+
+function renderPage() {
+  const stats = APP_DATA.studentStats;
+
+  // Generate Major Subjects rows
+  const majorRows = APP_DATA.majorSubjects.map(sub => `
+    <tr>
+      <td><strong>${sub.name}</strong></td>
+      <td><span class="badge ${sub.type === 'Lab' ? 'badge-purple' : 'badge-info'}">${sub.type}</span></td>
+      <td>${sub.present} / ${sub.total}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill ${sub.pct < sub.threshold ? 'danger' : 'primary'}" style="width:${sub.pct}%"></div></div>
+          <span class="progress-pct" style="${sub.pct < sub.threshold ? 'color:var(--accent-red)' : ''}">${sub.pct}%</span>
+        </div>
+      </td>
+      <td style="color:var(--text-secondary)">${sub.threshold}%</td>
+    </tr>
+  `).join('');
+
+  // Generate Minor Subjects rows
+  const minorRows = APP_DATA.minorSubjects.map(sub => `
+    <tr>
+      <td><strong>${sub.name}</strong></td>
+      <td><span class="badge badge-warning">${sub.dept} Dept</span></td>
+      <td>${sub.present} / ${sub.total}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill ${sub.pct < sub.threshold ? 'danger' : 'primary'}" style="width:${sub.pct}%"></div></div>
+          <span class="progress-pct" style="${sub.pct < sub.threshold ? 'color:var(--accent-red)' : ''}">${sub.pct}%</span>
+        </div>
+      </td>
+      <td style="color:var(--text-secondary)">${sub.threshold}%</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Subject-Wise Breakdown</h1>
+      <p class="page-subtitle">Track your attendance across all your enrolled courses.</p>
+    </div>
+
+    <!-- Overview Stats -->
+    <div class="stats-grid" style="margin-bottom:24px">
+      <div class="stat-card purple"><div class="stat-icon purple"><i class="fa-solid fa-percent"></i></div><div class="stat-value">${stats.overall_pct}%</div><div class="stat-label">Overall Average</div></div>
+      <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-check-double"></i></div><div class="stat-value">${stats.total_present}</div><div class="stat-label">Classes Attended</div></div>
+      <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-calendar-xmark"></i></div><div class="stat-value">${stats.total_absent}</div><div class="stat-label">Classes Missed</div></div>
+      <div class="stat-card amber"><div class="stat-icon amber"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-value">${stats.at_risk_count}</div><div class="stat-label">Subjects At Risk</div></div>
+    </div>
+
+    <!-- Major Subjects Table -->
+    <div class="card" style="margin-bottom: 24px">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-book-open" style="color:var(--accent-blue);margin-right:6px"></i>Core Subjects (Major)</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Subject</th><th>Type</th><th>Attended</th><th>Percentage</th><th>Required</th></tr></thead>
+          <tbody>${majorRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Minor/Elective Subjects Table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-book" style="color:var(--accent-purple);margin-right:6px"></i>Elective Subjects (Minor)</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Subject</th><th>Department</th><th>Attended</th><th>Percentage</th><th>Required</th></tr></thead>
+          <tbody>${minorRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Timetable — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <style>
+    .tt-grid {
+      display: grid;
+      grid-template-columns: 80px repeat(10, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    .tt-cell {
+      background: var(--surface);
+      padding: 10px 4px;
+      text-align: center;
+      font-size: 12px;
+      min-width: 75px;
+    }
+    .tt-header {
+      background: var(--bg-color);
+      font-weight: 600;
+      color: var(--text-main);
+      padding: 12px 4px;
+      text-align: center;
+      font-size: 13px;
+      min-width: 75px;
+    }
+    .tt-subject { font-weight: 600; color: var(--accent-blue); margin-bottom: 4px; }
+    .tt-faculty { font-size: 11px; color: var(--text-muted); }
+
+    .tabs { display:flex; border-bottom: 2px solid var(--border); margin-bottom:20px; }
+    .tab { padding: 12px 24px; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: var(--accent-purple); border-bottom-color: var(--accent-purple); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .period-row { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 16px; align-items: center; margin-bottom: 12px; }
+    
+    @media (max-width: 768px) {
+      .period-row { 
+        grid-template-columns: 1fr; 
+        gap: 8px; 
+        background: var(--bg-color); 
+        padding: 12px; 
+        border-radius: 8px; 
+        border: 1px solid var(--border);
+      }
+      .period-row > div:first-child { color: var(--accent-purple); font-size: 14px; margin-bottom: 4px; }
+      .period-header-row { display: none !important; }
+      
+      .tabs { flex-direction: column; }
+      .tab { text-align: center; border-left: 2px solid transparent; border-bottom: none; }
+      .tab.active { border-left-color: var(--accent-purple); border-bottom-color: transparent; background: var(--bg-hover); }
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('hod', 'Manage Timetable', 'timetable.html');
+  renderPage();
+});
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function renderPage() {
+  const staffOptions = APP_DATA.staffList.map(s => `<option value="${s.name}"></option>`).join('');
+  const subjectOptions = APP_DATA.majorSubjects.map(s => `<option value="${s.name}"></option>`).join('');
+
+  const datalists = `
+    <datalist id="subjectsList">
+      ${subjectOptions}
+      <option value="Lunch Break"></option>
+      <option value="Library"></option>
+      <option value="Sports"></option>
+      <option value="Free Period"></option>
+    </datalist>
+    <datalist id="facultyList">
+      ${staffOptions}
+      <option value="Guest Lecturer"></option>
+    </datalist>
+  `;
+
+  let manualRows = '';
+  for (let i = 1; i <= 10; i++) {
+    manualRows += `
+      <div class="period-row">
+        <div style="font-weight:600;color:var(--text-secondary)">Period ${i}</div>
+        <input type="text" class="form-control" list="subjectsList" placeholder="Select or type subject...">
+        <input type="text" class="form-control" list="facultyList" placeholder="Select or type faculty...">
+      </div>
+    `;
+  }
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Manage Timetable</h1>
+      <p class="page-subtitle">Upload or manually configure the weekly recurring timetable for up to 10 periods.</p>
+    </div>
+
+    <!-- Upload Rules & Info -->
+    <div class="alert alert-info" style="margin-bottom: 24px;">
+      <h4 style="margin-bottom: 8px; font-family: var(--font-head);"><i class="fa-solid fa-circle-info"></i> Automated Scheduling</h4>
+      <p style="font-size: 14px; line-height: 1.5;">
+        Once configured, the system <strong>automatically recurs this timetable for the entire semester</strong>. 
+        <br><strong>Holiday Rule:</strong> Any days marked as holidays in the Super Admin dashboard or suddenly declared holidays will automatically be excluded. The system skips generating attendance for those specific dates.
+      </p>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('tab-manual')"><i class="fa-solid fa-pen-to-square"></i> Manual Entry (10 Periods)</div>
+        <div class="tab" onclick="switchTab('tab-upload')"><i class="fa-solid fa-file-csv"></i> Bulk Upload CSV</div>
+      </div>
+
+      <!-- Tab: Manual Entry -->
+      <div id="tab-manual" class="tab-content active" style="padding: 16px;">
+        <form onsubmit="event.preventDefault(); flashMessage('Timetable for selected day saved successfully!', 'success');">
+          <div class="grid-2" style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label">Select Class/Semester</label>
+              <select class="form-control" required>
+                <option value="2nd-year">2nd Year BCA (CSE)</option>
+                <option value="3rd-year">3rd Year BCA (CSE)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Select Day</label>
+              <select class="form-control" required>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+              </select>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 24px;">
+            <div class="period-row period-header-row" style="margin-bottom: 8px;">
+              <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:700">Period</div>
+              <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:700">Subject</div>
+              <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:700">Assigned Faculty</div>
+            </div>
+            ${datalists}
+            ${manualRows}
+          </div>
+          
+          <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-floppy-disk"></i> Save Day Timetable</button>
+        </form>
+      </div>
+
+      <!-- Tab: Upload CSV -->
+      <div id="tab-upload" class="tab-content" style="padding: 16px;">
+        <form onsubmit="event.preventDefault(); flashMessage('Timetable CSV uploaded successfully!', 'success');">
+          <div class="form-group">
+            <label class="form-label">Select Class/Semester</label>
+            <select class="form-control" required>
+              <option value="">Choose Class...</option>
+              <option value="2nd-year">2nd Year BCA (CSE)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload CSV File (10 Periods Format)</label>
+            <input type="file" class="form-control" accept=".csv" required style="padding: 8px;" />
+            <small style="color:var(--text-muted);display:block;margin-top:6px;">Columns: Day, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10</small>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-cloud-arrow-up"></i> Upload & Apply Timetable</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Active Timetable View (Extended to 10 periods) -->
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="card-title"><i class="fa-solid fa-calendar-check" style="color:var(--accent-green);margin-right:6px"></i>Active Timetable (2nd Year)</span>
+        <span class="badge badge-success">Currently Active</span>
+      </div>
+      <div class="card-body" style="padding: 0; overflow-x: auto; width: 100%;">
+        <div class="tt-grid" style="min-width: 900px;">
+          <!-- Header -->
+          <div class="tt-header">Day</div>
+          <div class="tt-header">P1</div>
+          <div class="tt-header">P2</div>
+          <div class="tt-header">P3</div>
+          <div class="tt-header">P4</div>
+          <div class="tt-header">P5</div>
+          <div class="tt-header">P6</div>
+          <div class="tt-header">P7</div>
+          <div class="tt-header">P8</div>
+          <div class="tt-header">P9</div>
+          <div class="tt-header">P10</div>
+
+          <!-- Monday -->
+          <div class="tt-header" style="display:flex;align-items:center;justify-content:center;">Mon</div>
+          <div class="tt-cell"><div class="tt-subject">Data Structures</div><div class="tt-faculty">Prof. John</div></div>
+          <div class="tt-cell"><div class="tt-subject">DWDM</div><div class="tt-faculty">Prof. Sarah</div></div>
+          <div class="tt-cell"><div class="tt-subject">DBMS</div><div class="tt-faculty">Dr. Anand</div></div>
+          <div class="tt-cell"><div class="tt-subject">Python Lab</div><div class="tt-faculty">Prof. John</div></div>
+          <div class="tt-cell" style="background:var(--bg-color);"><i class="fa-solid fa-utensils"></i><br>Lunch</div>
+          <div class="tt-cell"><div class="tt-subject">Library</div><div class="tt-faculty">-</div></div>
+          <div class="tt-cell"><div class="tt-subject">OS</div><div class="tt-faculty">Dr. Anand</div></div>
+          <div class="tt-cell"><div class="tt-subject">- Free -</div></div>
+          <div class="tt-cell"><div class="tt-subject">- Free -</div></div>
+          <div class="tt-cell"><div class="tt-subject">- Free -</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

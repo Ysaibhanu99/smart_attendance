@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOD Dashboard — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/charts.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('hod', 'HOD Dashboard', 'dashboard.html');
+  renderPage();
+});
+
+function renderPage() {
+  const s = APP_DATA.hodStats;
+
+  const atRiskRows = APP_DATA.atRiskStudents.map(r => `
+    <tr>
+      <td><strong>${r.name}</strong></td>
+      <td style="color:var(--text-muted);font-size:12px">${r.roll}</td>
+      <td>${r.year}</td>
+      <td style="color:var(--text-secondary)">${r.subject}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill danger" style="width:${r.pct}%" data-width="${r.pct}%"></div></div>
+          <span class="progress-pct" style="color:var(--accent-red)">${r.pct}%</span>
+        </div>
+      </td>
+      <td><span class="badge badge-danger">At Risk</span></td>
+    </tr>`).join('');
+
+  const leaveRows = APP_DATA.leaveRequests.map((req, i) => `
+    <tr>
+      <td><strong>${req.name}</strong></td>
+      <td><span class="badge ${req.type==='Medical'?'badge-danger':'badge-info'}">${req.type}</span></td>
+      <td style="color:var(--text-secondary);font-size:12px">${req.from}</td>
+      <td style="color:var(--text-secondary);font-size:12px">${req.to}</td>
+      <td style="color:var(--text-secondary)">${req.reason}</td>
+      <td id="leaveAction${i}">
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-primary btn-xs" onclick="addAttendance(${i}, '${req.type}')"><i class="fa-solid fa-calendar-plus"></i> Add Attendance</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">CSE Department</h1>
+      <p class="page-subtitle">Dr. Anand Kumar · Semester II · 2024–25</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card blue"><div class="stat-icon blue"><i class="fa-solid fa-user-graduate"></i></div><div class="stat-value">${s.students}</div><div class="stat-label">Students</div></div>
+      <div class="stat-card green"><div class="stat-icon green"><i class="fa-solid fa-percent"></i></div><div class="stat-value">${s.avg_att}%</div><div class="stat-label">Dept Average</div><div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> +2% vs last month</div></div>
+      <div class="stat-card red"><div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-value">${s.at_risk}</div><div class="stat-label">At-Risk Students</div></div>
+      <div class="stat-card amber"><div class="stat-icon amber"><i class="fa-solid fa-file-circle-question"></i></div><div class="stat-value">${s.pending_leaves}</div><div class="stat-label">Pending Leaves</div></div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-book" style="color:var(--accent-blue);margin-right:6px"></i>Subject-wise Attendance</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="subjectChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--accent-green);margin-right:6px"></i>Monthly Trend</span></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Marks Quick Link -->
+    <div style="background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(6,182,212,0.05));border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:42px;height:42px;background:rgba(59,130,246,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--accent-blue);font-size:18px"><i class="fa-solid fa-graduation-cap"></i></div>
+        <div>
+          <div style="font-weight:600;color:var(--text-primary)">Marks Management</div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">2 exams pending publication · 1 subject has high fail rate (Data Structures).</div>
+        </div>
+      </div>
+      <a href="marks.html" class="btn btn-primary"><i class="fa-solid fa-graduation-cap"></i> View Marks Report</a>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><span class="card-title"><i class="fa-solid fa-triangle-exclamation" style="color:var(--accent-red);margin-right:6px"></i>At-Risk Students</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Student</th><th>Roll No</th><th>Year</th><th>Worst Subject</th><th>Attendance</th><th>Status</th></tr></thead>
+        <tbody>${atRiskRows}</tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title"><i class="fa-solid fa-file-circle-check" style="color:var(--accent-amber);margin-right:6px"></i>Pending Leave Requests</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Student</th><th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Actions</th></tr></thead>
+        <tbody>${leaveRows}</tbody></table>
+      </div>
+    </div>
+  `;
+
+  applyChartDefaults();
+  renderSubjectBarChart('subjectChart', ['Python','DBMS','Data Str','OS','DWDM','Maths'], [88,79,72,83,76,91]);
+  renderAttendanceTrendChart('trendChart', ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+    [{ label:'CSE Avg', data:[82,84,85,80,86,85,87,85] }]);
+  animateProgressBars();
+}
+
+function addAttendance(i, reason) {
+  confirmAction(`Add attendance based on leave reason (${reason})?`, () => {
+    document.getElementById(`leaveAction${i}`).innerHTML = `<span class="badge badge-primary">Attendance Added (${reason})</span>`;
+    showToast(`Attendance marked based on ${reason} leave.`, 'success');
+  });
+}
+</script>
+</body>
+</html>

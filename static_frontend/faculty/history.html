@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance History — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('faculty', 'Attendance History', 'history.html');
+  renderPage();
+});
+
+function renderPage() {
+  const rows = APP_DATA.attendanceHistory.map(row => `
+    <tr>
+      <td>${row.date}</td>
+      <td>Period ${row.period}</td>
+      <td><strong>${row.subject}</strong></td>
+      <td style="color:var(--text-muted)">${row.room}</td>
+      <td><span class="badge badge-success">${row.present} Present</span></td>
+      <td><span class="badge badge-danger">${row.absent} Absent</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="flashMessage('Viewing details...','info')">View Details</button></td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">My Class History</h1>
+      <p class="page-subtitle">Past attendance records marked by you.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-list-check" style="color:var(--accent-blue);margin-right:6px"></i>Previous Classes</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>Room</th><th>Present</th><th>Absent</th><th>Action</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

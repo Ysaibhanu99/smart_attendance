@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Marks Management — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <style>
+    .page-tab-bar{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:24px;width:fit-content;}
+    .page-tab{padding:8px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text-muted);transition:all .2s;}
+    .page-tab.active{background:var(--accent-blue);color:#fff;}
+    .step-indicator{display:flex;align-items:center;gap:0;margin-bottom:24px;}
+    .step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-muted);}
+    .step-num{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--surface);transition:all .25s;}
+    .step.active .step-num{background:var(--accent-blue);border-color:var(--accent-blue);color:#fff;}
+    .step.active{color:var(--text-primary);}
+    .step.done .step-num{background:#22c55e;border-color:#22c55e;color:#fff;}
+    .step.done{color:var(--text-secondary);}
+    .step-divider{flex:1;height:2px;background:var(--border);margin:0 10px;min-width:20px;}
+    .class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-bottom:16px;}
+    .class-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s;position:relative;}
+    .class-card:hover{border-color:var(--accent-blue);transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,130,246,.12);}
+    .class-card.selected{border-color:var(--accent-blue);background:rgba(59,130,246,.05);}
+    .class-card.selected::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;top:12px;right:14px;color:var(--accent-blue);font-size:14px;}
+    .class-card.hod-class{border-color:rgba(168,85,247,.4);}
+    .class-card.hod-class.selected{border-color:var(--accent-purple);background:rgba(168,85,247,.05);}
+    .hod-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(168,85,247,.12);color:#a855f7;border:1px solid rgba(168,85,247,.25);border-radius:20px;padding:2px 9px;font-size:10px;font-weight:600;margin-bottom:8px;}
+    .sub-tab-bar,.exam-tab-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+    .sub-tab,.exam-tab{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);transition:all .2s;}
+    .sub-tab.active{background:var(--accent-blue);color:#fff;border-color:var(--accent-blue);}
+    .exam-tab.active{background:var(--accent-purple);color:#fff;border-color:var(--accent-purple);}
+    .exam-tab.published{border-color:rgba(34,197,94,.5);color:#22c55e;}
+    .marks-input{width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:14px;text-align:center;}
+    .marks-input:focus{outline:none;border-color:var(--accent-blue);}
+    .grade-preview{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:6px;}
+    .pill-pub{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);border-radius:20px;padding:2px 9px;font-size:11px;}
+    .pill-pend{background:rgba(245,158,11,.12);color:var(--accent-amber);border:1px solid rgba(245,158,11,.25);border-radius:20px;padding:2px 9px;font-size:11px;}
+    .avg-big{font-family:var(--font-head);font-size:20px;font-weight:800;}
+    .breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);margin-bottom:18px;flex-wrap:wrap;}
+    .breadcrumb a{color:var(--accent-blue);cursor:pointer;}
+    .stat-mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;}
+    .stat-mini{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+    .stat-mini-label{font-size:11px;color:var(--text-muted);margin-bottom:5px;}
+    .stat-mini-val{font-family:var(--font-head);font-size:22px;font-weight:800;}
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  loadComponents('hod','Marks Management','marks.html');
+  renderPage();
+});
+
+const HOD_NAME = 'Dr. Anand Kumar';
+let activeTab = 'enter'; // 'enter' | 'overview'
+let selectedClassId = null;
+let curSubj = 0, curExam = 0;
+
+// Deep-clone
+let localCL = APP_DATA.classList.map(cls=>({
+  ...cls,
+  subjects:cls.subjects.map(sub=>({
+    ...sub,
+    exams:sub.exams.map(e=>({...e})),
+    students:sub.students.map(st=>({...st,marks:[...st.marks]}))
+  }))
+}));
+
+function hodClasses(){ return localCL.filter(cls=>cls.subjects.some(s=>s.faculty===HOD_NAME)); }
+
+function getGrade(marks,max){
+  if(marks===null||marks===undefined||marks==='') return null;
+  const m=parseFloat(marks); if(isNaN(m)) return null;
+  const pct=(m/max)*100;
+  for(const g of APP_DATA.gradeConfig){ if(pct>=g.min) return g; }
+  return APP_DATA.gradeConfig[APP_DATA.gradeConfig.length-1];
+}
+
+/* ─── MAIN PAGE ─────────────────────────────────────────────── */
+function renderPage(){
+  document.getElementById('pageContent').innerHTML=`
+    <div class="page-header">
+      <h1 class="page-title"><i class="fa-solid fa-graduation-cap" style="margin-right:8px;color:var(--accent-blue)"></i>Marks Management</h1>
+      <p class="page-subtitle">Enter marks for your classes · View department overview</p>
+    </div>
+    <div class="page-tab-bar">
+      <button class="page-tab ${activeTab==='enter'?'active':''}" onclick="switchTab('enter')">
+        <i class="fa-solid fa-pen-to-square" style="margin-right:6px"></i>Enter Marks
+      </button>
+      <button class="page-tab ${activeTab==='overview'?'active':''}" onclick="switchTab('overview')">
+        <i class="fa-solid fa-table-list" style="margin-right:6px"></i>Dept Overview
+      </button>
+    </div>
+    <div id="tabContent"></div>`;
+  if(activeTab==='enter') showClassStep();
+  else showOverview();
+}
+
+function switchTab(tab){
+  activeTab=tab;
+  selectedClassId=null; curSubj=0; curExam=0;
+  document.querySelectorAll('.page-tab').forEach((b,i)=>b.classList.toggle('active',[tab==='enter',tab==='overview'][i]));
+  const tc=document.getElementById('tabContent');
+  if(!tc) return;
+  tc.innerHTML='';
+  if(tab==='enter') showClassStep();
+  else showOverview();
+}
+
+/* ─── STEP 1: CLASS ─────────────────────────────────────────── */
+function showClassStep(){
+  selectedClassId=null; curSubj=0; curExam=0;
+  renderSteps(1);
+  const classes=hodClasses();
+  document.getElementById('innerArea').innerHTML=`
+    <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px">
+      <i class="fa-solid fa-chalkboard" style="color:var(--accent-blue);margin-right:8px"></i>Step 1 — Select Your Class
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+      As HOD and class teacher you can enter marks for the classes you teach.
+    </div>
+    <div class="class-grid">
+      ${classes.map(cls=>{
+        const myS=cls.subjects.filter(s=>s.faculty===HOD_NAME);
+        const pub=myS.reduce((a,s)=>a+s.exams.filter(e=>e.published).length,0);
+        const pend=myS.reduce((a,s)=>a+s.exams.filter(e=>!e.published).length,0);
+        return `<div class="class-card hod-class" id="cls_${cls.id}" onclick="selectClass('${cls.id}')">
+          <div class="hod-badge"><i class="fa-solid fa-shield-halved"></i>HOD / Class Teacher</div>
+          <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:4px">${cls.label}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px"><i class="fa-solid fa-users" style="margin-right:4px"></i>${cls.strength} students · ${myS.length} subject(s)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span class="pill-pub"><i class="fa-solid fa-check" style="font-size:9px;margin-right:3px"></i>${pub} published</span>
+            <span class="pill-pend"><i class="fa-regular fa-clock" style="font-size:9px;margin-right:3px"></i>${pend} pending</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn btn-primary" id="proceedBtn" disabled onclick="proceedToSubject()">
+      <i class="fa-solid fa-arrow-right"></i> Continue to Subject
+    </button>`;
+}
+
+function selectClass(id){
+  selectedClassId=id;
+  document.querySelectorAll('.class-card').forEach(c=>c.classList.remove('selected'));
+  const el=document.getElementById('cls_'+id);
+  if(el) el.classList.add('selected');
+  const btn=document.getElementById('proceedBtn');
+  if(btn) btn.disabled=false;
+}
+
+/* ─── STEP 2+3: SUBJECT & MARKS ─────────────────────────────── */
+function proceedToSubject(){
+  if(!selectedClassId) return;
+  curSubj=0; curExam=0;
+  renderSteps(2);
+  renderSubjectArea();
+}
+
+function renderSubjectArea(){
+  const cls=localCL.find(c=>c.id===selectedClassId);
+  const myS=cls.subjects.filter(s=>s.faculty===HOD_NAME);
+  document.getElementById('innerArea').innerHTML=`
+    <div class="breadcrumb">
+      <a onclick="showClassStep()"><i class="fa-solid fa-chalkboard" style="margin-right:4px"></i>My Classes</a>
+      <span>›</span>
+      <strong style="color:var(--text-primary)">${cls.label}</strong>
+    </div>
+    <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:10px">
+      <i class="fa-solid fa-book" style="color:var(--accent-blue);margin-right:6px"></i>Step 2 — Subject
+    </div>
+    <div class="sub-tab-bar" id="subTabBar"></div>
+    <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:10px">
+      <i class="fa-solid fa-file-pen" style="color:var(--accent-purple);margin-right:6px"></i>Step 3 — Exam
+    </div>
+    <div class="exam-tab-bar" id="examTabBar"></div>
+    <div id="marksTable"></div>`;
+  renderSubTabs(myS); renderExamTabs(myS); renderMarksTable(myS);
+}
+
+function renderSubTabs(subjects){
+  document.getElementById('subTabBar').innerHTML=subjects.map((s,i)=>`
+    <button class="sub-tab ${i===curSubj?'active':''}" onclick="selSubj(${i})">${s.subject}<span style="font-size:10px;opacity:.6;margin-left:4px">/${s.maxMarks}</span></button>`).join('');
+}
+function renderExamTabs(subjects){
+  const sub=subjects[curSubj];
+  document.getElementById('examTabBar').innerHTML=sub.exams.map((e,i)=>`
+    <button class="exam-tab ${i===curExam?'active':''} ${e.published?'published':''}" onclick="selExam(${i})">
+      ${e.exam}${e.published?'<i class="fa-solid fa-check" style="margin-left:5px;font-size:10px"></i>':''}
+    </button>`).join('');
+}
+function selSubj(i){ curSubj=i; curExam=0; const cls=localCL.find(c=>c.id===selectedClassId); const myS=cls.subjects.filter(s=>s.faculty===HOD_NAME); renderSubTabs(myS); renderExamTabs(myS); renderMarksTable(myS); }
+function selExam(i){ curExam=i; const cls=localCL.find(c=>c.id===selectedClassId); const myS=cls.subjects.filter(s=>s.faculty===HOD_NAME); renderExamTabs(myS); renderMarksTable(myS); }
+
+function renderMarksTable(subjects){
+  const sub=subjects[curSubj]; const exam=sub.exams[curExam];
+  const rows=sub.students.map((st,si)=>{
+    const m=st.marks[curExam]; const g=getGrade(m,sub.maxMarks);
+    const gp=g?`<span class="grade-preview" style="background:${g.color}18;color:${g.color}">${g.grade}</span>`:'';
+    return `<tr>
+      <td style="font-size:12px;color:var(--text-muted)">${st.roll}</td>
+      <td><strong>${st.name}</strong></td>
+      <td><div style="display:flex;align-items:center">
+        <input class="marks-input" type="number" min="0" max="${sub.maxMarks}"
+          value="${m!==null&&m!==undefined?m:''}" placeholder="—" id="m_${si}"
+          ${exam.published?'disabled':''} oninput="onInput(${si},this.value)"/>
+        <span id="g_${si}">${gp}</span>
+      </div></td>
+      <td style="font-size:12px;color:var(--text-muted)">/${sub.maxMarks}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('marksTable').innerHTML=`
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-table" style="color:var(--accent-blue);margin-right:6px"></i>${sub.subject} — ${exam.exam}</span>
+        <span class="badge ${exam.published?'':'status-badge-pend'}" style="${exam.published?'background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25)':''}">
+          <i class="fa-solid ${exam.published?'fa-check':'fa-clock'}"></i> ${exam.published?'Published':'Draft'}
+        </span>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Roll No</th><th>Student</th><th>Marks</th><th>Max</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      <div class="card-body" style="border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
+        ${exam.published
+          ?`<span style="font-size:13px;color:var(--accent-green)"><i class="fa-solid fa-circle-check"></i> Published — edit via department override.</span>`
+          :`<button class="btn btn-ghost" onclick="saveDraft()"><i class="fa-solid fa-floppy-disk"></i> Save Draft</button>
+            <button class="btn btn-primary" onclick="publishMarks()"><i class="fa-solid fa-paper-plane"></i> Publish Marks</button>`}
+      </div>
+    </div>`;
+}
+
+function onInput(si,val){
+  const cls=localCL.find(c=>c.id===selectedClassId);
+  const myS=cls.subjects.filter(s=>s.faculty===HOD_NAME);
+  const sub=myS[curSubj];
+  const num=val===''?null:parseFloat(val);
+  sub.students[si].marks[curExam]=isNaN(num)?null:num;
+  const g=getGrade(num,sub.maxMarks);
+  const gp=g?`<span class="grade-preview" style="background:${g.color}18;color:${g.color}">${g.grade}</span>`:'';
+  const el=document.getElementById('g_'+si); if(el) el.innerHTML=gp;
+}
+function saveDraft(){ showToast('Draft saved!','success'); }
+function publishMarks(){
+  const cls=localCL.find(c=>c.id===selectedClassId);
+  const myS=cls.subjects.filter(s=>s.faculty===HOD_NAME);
+  const sub=myS[curSubj]; const exam=sub.exams[curExam];
+  const ok=sub.students.every(st=>st.marks[curExam]!==null&&st.marks[curExam]!==undefined);
+  if(!ok){ showToast('Enter marks for all students first.','danger'); return; }
+  confirmAction(`Publish ${exam.exam} marks for ${sub.subject}? This cannot be undone.`,()=>{
+    exam.published=true;
+    showToast(`${exam.exam} marks published!`,'success');
+    renderExamTabs(myS); renderMarksTable(myS);
+  });
+}
+
+/* ─── STEP INDICATOR ────────────────────────────────────────── */
+function renderSteps(active){
+  const steps=[{n:1,label:'Select Class'},{n:2,label:'Select Subject'},{n:3,label:'Enter Marks'}];
+  const html=`<div class="step-indicator">${steps.map((s,i)=>`
+    <div class="step ${active>s.n?'done':active===s.n?'active':''}">
+      <div class="step-num">${active>s.n?'<i class="fa-solid fa-check" style="font-size:10px"></i>':s.n}</div>
+      <span>${s.label}</span>
+    </div>${i<steps.length-1?'<div class="step-divider"></div>':''}`).join('')}
+  </div><div id="innerArea"></div>`;
+  document.getElementById('tabContent').innerHTML=html;
+}
+
+/* ─── OVERVIEW TAB ──────────────────────────────────────────── */
+function showOverview(){
+  const data=APP_DATA.deptMarksSummary;
+  const totalPub=data.reduce((a,s)=>a+s.published.length,0);
+  const totalPend=data.reduce((a,s)=>a+s.pending.length,0);
+  const totalFail=data.reduce((a,s)=>a+s.failCount,0);
+  const avgI1=Math.round(data.reduce((a,s)=>a+s.avg_i1,0)/data.length);
+  const rows=data.map(s=>{
+    const pp=s.published.map(e=>`<span class="pill-pub"><i class="fa-solid fa-check" style="font-size:9px;margin-right:2px"></i>${e}</span>`).join(' ');
+    const pd=s.pending.map(e=>`<span class="pill-pend"><i class="fa-regular fa-clock" style="font-size:9px;margin-right:2px"></i>${e}</span>`).join(' ');
+    const ac=s.avg_i1>=75?'var(--accent-green)':s.avg_i1>=60?'var(--accent-amber)':'var(--accent-red)';
+    const isHOD=s.faculty.includes('Anand Kumar');
+    return `<tr>
+      <td><strong>${s.subject}</strong></td>
+      <td style="color:var(--text-secondary);font-size:13px">${s.faculty}${isHOD?'<span class="hod-badge" style="margin-left:6px"><i class="fa-solid fa-shield-halved"></i>You</span>':''}</td>
+      <td><span class="avg-big" style="color:${ac}">${s.avg_i1}</span><span style="color:var(--text-muted);font-size:11px">/100</span></td>
+      <td><span class="avg-big" style="color:${s.avg_i2>=75?'var(--accent-green)':s.avg_i2>=60?'var(--accent-amber)':'var(--accent-red)'}">${s.avg_i2}</span><span style="color:var(--text-muted);font-size:11px">/100</span></td>
+      <td><span class="badge ${s.failCount>0?'badge-danger':'badge-success'}">${s.failCount}</span></td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:4px">${pp}</div></td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:4px">${pd}</div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tabContent').innerHTML=`
+    <div class="stat-mini-grid">
+      <div class="stat-mini"><div class="stat-mini-label">Dept Avg (Internal 1)</div><div class="stat-mini-val" style="color:var(--accent-blue)">${avgI1}<span style="font-size:13px;color:var(--text-muted)">/100</span></div></div>
+      <div class="stat-mini"><div class="stat-mini-label">Exams Published</div><div class="stat-mini-val" style="color:var(--accent-green)">${totalPub}</div></div>
+      <div class="stat-mini"><div class="stat-mini-label">Exams Pending</div><div class="stat-mini-val" style="color:var(--accent-amber)">${totalPend}</div></div>
+      <div class="stat-mini"><div class="stat-mini-label">Failing Students</div><div class="stat-mini-val" style="color:${totalFail>0?'var(--accent-red)':'var(--accent-green)'}">${totalFail}</div></div>
+      <div class="stat-mini"><div class="stat-mini-label">Subjects</div><div class="stat-mini-val">${data.length}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title"><i class="fa-solid fa-table-list" style="color:var(--accent-blue);margin-right:6px"></i>Subject-wise Summary</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Subject</th><th>Faculty</th><th>Avg I-1</th><th>Avg I-2</th><th>Fails</th><th>Published</th><th>Pending</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><span class="card-title"><i class="fa-solid fa-circle-info" style="color:var(--accent-cyan);margin-right:6px"></i>Grade Scale</span></div>
+      <div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${APP_DATA.gradeConfig.map(g=>`
+          <div style="background:${g.color}18;border:1px solid ${g.color}30;border-radius:8px;padding:8px 14px;text-align:center">
+            <div style="font-family:var(--font-head);font-size:18px;font-weight:800;color:${g.color}">${g.grade}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${g.label}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${g.min}%+</div>
+          </div>`).join('')}
+      </div></div>
+    </div>`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mark Attendance — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('faculty', 'Mark Attendance', 'mark-attendance.html');
+  renderPage();
+});
+
+// Track attendance state per student
+const attendanceState = {};
+
+function renderPage() {
+  const subjects = ['Data Structures (Theory)', 'DWDM (Theory)', 'Python Lab (Lab)', 'Mathematics (Theory)'];
+
+  const studentRows = APP_DATA.attendanceStudents.map(s => {
+    attendanceState[s.id] = 'present'; // default all present
+    return `
+    <div class="att-student-row" data-id="${s.id}">
+      <span class="att-roll">${s.roll}</span>
+      <span class="att-name">${s.name}</span>
+      <div class="att-toggle">
+        <button type="button" class="att-btn present active" onclick="setStatus(${s.id},'present',this)">P</button>
+        <button type="button" class="att-btn absent" onclick="setStatus(${s.id},'absent',this)">A</button>
+        <button type="button" class="att-btn excused" onclick="setStatus(${s.id},'excused',this)">E</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="page-title">Mark Attendance</h1>
+        <p class="page-subtitle">All students default Present — mark only absences</p>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--text-secondary)">
+        <i class="fa-solid fa-stopwatch" style="color:var(--accent-amber);margin-right:6px"></i>
+        Timer: <strong id="markingTimer" style="color:var(--text-primary)">0:00</strong>
+      </div>
+    </div>
+
+    <!-- Session Selector -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><span class="card-title">Session Details</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Date</label>
+            <input type="date" id="sessionDate" max="${new Date().toISOString().split('T')[0]}" value="${new Date().toISOString().split('T')[0]}" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Subject</label>
+            <select id="subjectSelect">
+              ${subjects.map(s => `<option>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Period</label>
+            <select id="periodSelect">
+              ${[1,2,3,4,5,6,7,8].map(p => `<option value="${p}">Period ${p}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Is Substitute?</label>
+            <select id="isSubstitute">
+              <option value="0">No — My Class</option>
+              <option value="1">Yes — Covering</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marking Area -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <span class="card-title"><i class="fa-solid fa-users" style="color:var(--accent-blue);margin-right:6px"></i>Data Structures</span>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${APP_DATA.attendanceStudents.length} students · Period 1</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--accent-green);font-weight:600">
+            <i class="fa-solid fa-circle-check"></i> <span id="pCount">${APP_DATA.attendanceStudents.length}</span> Present
+          </span>
+          <span style="color:var(--border)">|</span>
+          <span style="font-size:13px;color:var(--accent-red);font-weight:600">
+            <i class="fa-solid fa-circle-xmark"></i> <span id="aCount">0</span> Absent
+          </span>
+          <button type="button" id="markAllPresent" class="btn btn-success btn-sm">
+            <i class="fa-solid fa-check-double"></i> All Present
+          </button>
+        </div>
+      </div>
+
+      <div id="studentList">${studentRows}</div>
+
+      <div style="padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="font-size:12px;color:var(--text-muted)">
+          <i class="fa-solid fa-info-circle"></i> IP address will be logged with this submission.
+        </div>
+        <div style="display:flex;gap:10px">
+          <a href="dashboard.html" class="btn btn-ghost">Cancel</a>
+          <button class="btn btn-primary" id="submitBtn" onclick="submitAttendance()">
+            <i class="fa-solid fa-paper-plane"></i> Submit Attendance
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  startMarkingTimer();
+
+  // All Present button
+  document.getElementById('markAllPresent').addEventListener('click', () => {
+    document.querySelectorAll('.att-student-row').forEach(row => {
+      const id = parseInt(row.getAttribute('data-id'));
+      const presentBtn = row.querySelector('.att-btn.present');
+      row.querySelectorAll('.att-btn').forEach(b => b.classList.remove('active'));
+      presentBtn.classList.add('active');
+      attendanceState[id] = 'present';
+    });
+    updateCounts();
+    showToast('All students marked Present.', 'success');
+  });
+}
+
+function setStatus(id, status, btn) {
+  attendanceState[id] = status;
+  const row = btn.closest('.att-student-row');
+  row.querySelectorAll('.att-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateCounts();
+}
+
+function updateCounts() {
+  const vals = Object.values(attendanceState);
+  document.getElementById('pCount').textContent = vals.filter(v => v === 'present').length;
+  document.getElementById('aCount').textContent = vals.filter(v => v === 'absent').length;
+}
+
+function submitAttendance() {
+  const absent = parseInt(document.getElementById('aCount').textContent);
+  const msg = absent === 0
+    ? 'Submit with ALL students marked Present?'
+    : `Submit? ${absent} student(s) will be marked Absent.`;
+
+  confirmAction(msg, () => {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...';
+    // Simulate API call
+    setTimeout(() => {
+      showToast('Attendance submitted successfully!', 'success');
+      setTimeout(() => window.location.href = 'dashboard.html', 1200);
+    }, 800);
+  });
+}
+</script>
+</body>
+</html>

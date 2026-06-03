@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Departments — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('admin', 'Manage Departments', 'departments.html');
+  renderPage();
+});
+
+function renderPage() {
+  // Generate options for assigning an HOD from staffList
+  const staffOptions = APP_DATA.staffList.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+  // Generate table rows for existing departments
+  const deptRows = APP_DATA.departments.map((d, idx) => `
+    <tr id="dept-row-${idx}">
+      <td><strong>${d.name}</strong></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>${d.hod}</span>
+          <button class="btn btn-ghost btn-sm" onclick="reassignHod('${d.name}', '${d.hod}')" title="Reassign HOD" style="padding:2px 6px"><i class="fa-solid fa-pen-to-square" style="font-size:12px"></i></button>
+        </div>
+      </td>
+      <td>${d.students}</td>
+      <td>${d.faculty}</td>
+      <td><span class="badge badge-success">Active</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" style="color:var(--accent-red)" onclick="removeDept(${idx}, '${d.name}')">
+          <i class="fa-solid fa-trash"></i> Remove
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Manage Departments</h1>
+      <p class="page-subtitle">Create new departments, assign Heads of Department (HODs), and remove obsolete ones.</p>
+    </div>
+
+    <!-- Create Department Form -->
+    <div class="card" style="margin-bottom: 24px; max-width: 800px;">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-building-circle-check" style="color:var(--accent-blue);margin-right:6px"></i>Create New Department</span>
+      </div>
+      <div class="card-body">
+        <form onsubmit="event.preventDefault(); flashMessage('Department created successfully!', 'success');">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Department Name</label>
+              <input type="text" class="form-control" placeholder="e.g. Artificial Intelligence (AI)" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Assign HOD</label>
+              <select class="form-control" required>
+                <option value="">Select a Staff Member</option>
+                ${staffOptions}
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create Department</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Existing Departments List -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-building" style="color:var(--accent-purple);margin-right:6px"></i>Existing Departments</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Department</th><th>Current HOD</th><th>Total Students</th><th>Total Faculty</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>${deptRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// Action Handlers
+window.removeDept = function(idx, name) {
+  if (confirm(`CRITICAL WARNING:\n\nAre you sure you want to permanently remove the ${name} department? This will orphan all associated students and faculty records. This action cannot be undone.`)) {
+    const row = document.getElementById(`dept-row-${idx}`);
+    row.style.opacity = '0.5';
+    row.style.pointerEvents = 'none';
+    flashMessage(`${name} department has been removed from the system.`, 'success');
+  }
+};
+
+window.reassignHod = function(deptName, currentHod) {
+  const newHod = prompt(`Reassign HOD for ${deptName}\n\nCurrent HOD: ${currentHod}\nType the name of the new HOD:`);
+  if (newHod && newHod.trim() !== "") {
+    flashMessage(`HOD for ${deptName} has been successfully updated to ${newHod}.`, 'success');
+    // In a real app, this would refresh the page/table after API call
+  }
+};
+</script>
+</body>
+</html>

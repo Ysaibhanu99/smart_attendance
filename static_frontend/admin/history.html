@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System Logs & History — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('admin', 'System History & Logs', 'history.html');
+  renderPage();
+});
+
+function renderPage() {
+  const rows = APP_DATA.auditLogs.map(log => `
+    <tr>
+      <td>${log.ts}</td>
+      <td><strong>${log.student}</strong></td>
+      <td>${log.subject}</td>
+      <td><span class="badge badge-warning">${log.old}</span> <i class="fa-solid fa-arrow-right" style="margin:0 5px;font-size:10px;color:var(--text-muted)"></i> <span class="badge badge-success">${log.new}</span></td>
+      <td>${log.by}</td>
+      <td style="color:var(--text-secondary)">${log.reason}</td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Audit Logs</h1>
+      <p class="page-subtitle">Track all attendance modifications, leave approvals, and system changes.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-blue);margin-right:6px"></i>Recent System Activity</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Timestamp</th><th>Student</th><th>Subject</th><th>Change</th><th>Modified By</th><th>Reason</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

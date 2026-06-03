@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marks Overview — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <style>
+    .pill-pub  { background:rgba(34,197,94,0.12); color:#22c55e; border:1px solid rgba(34,197,94,0.25); border-radius:20px; padding:2px 9px; font-size:11px; font-weight:500; }
+    .pill-pend { background:rgba(245,158,11,0.12); color:var(--accent-amber); border:1px solid rgba(245,158,11,0.25); border-radius:20px; padding:2px 9px; font-size:11px; font-weight:500; }
+    .marks-stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:24px; }
+    .marks-stat-item { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+    .marks-stat-item .msi-label { font-size:12px; color:var(--text-muted); margin-bottom:6px; }
+    .marks-stat-item .msi-val   { font-family:var(--font-head); font-size:24px; font-weight:800; color:var(--text-primary); }
+    .dept-section-title { font-family:var(--font-head); font-size:15px; font-weight:700; color:var(--text-primary); margin:24px 0 12px; display:flex; align-items:center; gap:8px; }
+    .avg-pill  { display:inline-block; font-family:var(--font-head); font-size:18px; font-weight:800; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('admin', 'Marks Overview', 'marks.html');
+  renderPage();
+});
+
+function renderPage() {
+  const data  = APP_DATA.deptMarksSummary;
+  const depts = APP_DATA.departments;
+
+  const totalPub  = data.reduce((a,s) => a + s.published.length, 0);
+  const totalPend = data.reduce((a,s) => a + s.pending.length, 0);
+  const totalFail = data.reduce((a,s) => a + s.failCount, 0);
+  const avgAll    = Math.round(data.reduce((a,s) => a + s.avg_i1, 0) / data.length);
+
+  const buildRows = (rows) => rows.map(s => {
+    const pubPills  = s.published.map(e => `<span class="pill-pub"><i class="fa-solid fa-check" style="margin-right:3px;font-size:9px"></i>${e}</span>`).join(' ');
+    const pendPills = s.pending.map(e => `<span class="pill-pend"><i class="fa-regular fa-clock" style="margin-right:3px;font-size:9px"></i>${e}</span>`).join(' ');
+    const avgColor = s.avg_i1 >= 75 ? 'var(--accent-green)' : s.avg_i1 >= 60 ? 'var(--accent-amber)' : 'var(--accent-red)';
+    return `
+      <tr>
+        <td><strong>${s.subject}</strong></td>
+        <td style="color:var(--text-secondary);font-size:13px">${s.faculty}</td>
+        <td><span class="avg-pill" style="color:${avgColor}">${s.avg_i1}</span><span style="color:var(--text-muted);font-size:11px"> /100</span></td>
+        <td><span class="avg-pill" style="color:${s.avg_i2>=75?'var(--accent-green)':s.avg_i2>=60?'var(--accent-amber)':'var(--accent-red)'}">${s.avg_i2}</span><span style="color:var(--text-muted);font-size:11px"> /100</span></td>
+        <td><span class="${s.failCount>0?'badge badge-danger':'badge badge-success'}">${s.failCount}</span></td>
+        <td><div style="display:flex;flex-wrap:wrap;gap:4px">${pubPills}</div></td>
+        <td><div style="display:flex;flex-wrap:wrap;gap:4px">${pendPills}</div></td>
+      </tr>`;
+  }).join('');
+
+  const deptSummaryRows = depts.map(d => `
+    <tr>
+      <td><strong>${d.name}</strong></td>
+      <td style="color:var(--text-secondary)">${d.hod}</td>
+      <td>${d.students}</td>
+      <td>${d.faculty}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill ${d.avg>=80?'safe':d.avg>=75?'warn':'danger'}" style="width:${d.avg}%" data-width="${d.avg}%"></div></div>
+          <span class="progress-pct">${d.avg}%</span>
+        </div>
+      </td>
+      <td><span class="badge ${d.at_risk>20?'badge-danger':d.at_risk>10?'badge-warning':'badge-success'}">${d.at_risk} at-risk</span></td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title"><i class="fa-solid fa-graduation-cap" style="margin-right:8px;color:var(--accent-blue)"></i>Marks Overview</h1>
+      <p class="page-subtitle">College-wide academic performance · Semester II · 2024–25</p>
+    </div>
+
+    <div class="marks-stat-grid">
+      <div class="marks-stat-item">
+        <div class="msi-label">College Avg (Internal 1)</div>
+        <div class="msi-val" style="color:var(--accent-blue)">${avgAll}<span style="font-size:13px;color:var(--text-muted)">/100</span></div>
+      </div>
+      <div class="marks-stat-item">
+        <div class="msi-label">Exams Published</div>
+        <div class="msi-val" style="color:var(--accent-green)">${totalPub}</div>
+      </div>
+      <div class="marks-stat-item">
+        <div class="msi-label">Exams Pending</div>
+        <div class="msi-val" style="color:var(--accent-amber)">${totalPend}</div>
+      </div>
+      <div class="marks-stat-item">
+        <div class="msi-label">Failing Students</div>
+        <div class="msi-val" style="color:${totalFail>0?'var(--accent-red)':'var(--accent-green)'}">${totalFail}</div>
+      </div>
+      <div class="marks-stat-item">
+        <div class="msi-label">Subjects Tracked</div>
+        <div class="msi-val">${data.length}</div>
+      </div>
+      <div class="marks-stat-item">
+        <div class="msi-label">Departments</div>
+        <div class="msi-val">${depts.length}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-book-open" style="color:var(--accent-blue);margin-right:6px"></i>CSE — Subject Marks Summary</span>
+        <span class="badge badge-info">CSE Dept</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Subject</th><th>Faculty</th><th>Avg I-1</th><th>Avg I-2</th><th>Fails</th><th>Published</th><th>Pending</th></tr></thead>
+          <tbody>${buildRows(data)}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-building" style="color:var(--accent-purple);margin-right:6px"></i>Department-wise Summary</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dept</th><th>HOD</th><th>Students</th><th>Faculty</th><th>Avg Attendance</th><th>At-Risk</th></tr></thead>
+          <tbody>${deptSummaryRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fa-solid fa-circle-info" style="color:var(--accent-cyan);margin-right:6px"></i>Grade Scale</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          ${APP_DATA.gradeConfig.map(g =>
+            `<div style="background:${g.color}18;border:1px solid ${g.color}30;border-radius:8px;padding:8px 14px;text-align:center">
+              <div style="font-family:var(--font-head);font-size:18px;font-weight:800;color:${g.color}">${g.grade}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${g.label}</div>
+              <div style="font-size:10px;color:var(--text-muted)">${g.min}%+</div>
+            </div>`
+          ).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  animateProgressBars();
+}
+</script>
+</body>
+</html>

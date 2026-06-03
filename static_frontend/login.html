@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Smart Attendance System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card">
+
+    <div class="auth-logo">
+      <div class="mark">SmartAttend</div>
+      <div class="tagline">Don't just track attendance. Prevent failures.</div>
+    </div>
+
+    <h2 class="auth-title">Welcome back</h2>
+    <p class="auth-sub">Sign in to your account</p>
+
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="email">Email address</label>
+        <div class="input-icon-wrap">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="email" placeholder="your@email.com" required autocomplete="email" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-icon-wrap" style="position:relative">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password" />
+          <button type="button" class="password-toggle"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;margin-top:-8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);text-transform:none;letter-spacing:0;cursor:pointer">
+          <input type="checkbox" id="remember" style="width:auto;accent-color:var(--accent-blue)" />
+          Remember me
+        </label>
+      </div>
+
+      <button type="submit" class="btn-auth">
+        <i class="fa-solid fa-right-to-bracket" style="margin-right:6px"></i>
+        Sign In
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>Quick Demo Logins</span></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="demo-fill" data-email="principal@college.edu" data-pass="admin123"
+        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Super Admin</div>
+        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">principal@college.edu</div>
+      </button>
+      <button class="demo-fill" data-email="hod.cse@college.edu" data-pass="admin123"
+        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">HOD</div>
+        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">hod.cse@college.edu</div>
+      </button>
+      <button class="demo-fill" data-email="john@cse.edu" data-pass="admin123"
+        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Faculty</div>
+        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">john@cse.edu</div>
+      </button>
+      <button class="demo-fill" data-email="rahul@cse.edu" data-pass="admin123"
+        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Student</div>
+        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">rahul@cse.edu</div>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

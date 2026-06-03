@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Substitutes — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('hod', 'Manage Substitutes', 'substitute.html');
+  renderPage();
+});
+
+function renderPage() {
+  const staffOptions = APP_DATA.staffList.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+
+  const allRequests = APP_DATA.substituteRequests.map(r => `
+    <tr>
+      <td>${r.date}</td>
+      <td>Period ${r.period}</td>
+      <td>${r.subject}</td>
+      <td><strong>${r.originalFaculty}</strong></td>
+      <td><i class="fa-solid fa-arrow-right" style="color:var(--text-muted);font-size:12px;margin:0 8px"></i> ${r.requestedFaculty}</td>
+      <td><span class="badge badge-${r.status === 'approved' ? 'success' : (r.status === 'pending' ? 'warning' : 'danger')}">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Department Substitutes</h1>
+      <p class="page-subtitle">Reassign classes for staff on leave and monitor department substitute requests.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Admin Reassign Form -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-user-shield" style="color:var(--accent-red);margin-right:6px"></i>HOD Reassignment</span>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">Directly reassign a class. This will notify both faculty members.</p>
+          <form onsubmit="event.preventDefault(); flashMessage('Class reassigned successfully!', 'success');">
+            <div class="form-group">
+              <label class="form-label">Faculty on Leave</label>
+              <select class="form-control" required>
+                <option value="">Select Faculty</option>
+                ${staffOptions}
+              </select>
+            </div>
+            <div class="form-group" style="display:flex;gap:12px;">
+              <div style="flex:1">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-control" required />
+              </div>
+              <div style="flex:1">
+                <label class="form-label">Period</label>
+                <select class="form-control" required>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input type="text" class="form-control" placeholder="Subject Name" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reassign To</label>
+              <select class="form-control" required>
+                <option value="">Select Faculty to Cover</option>
+                ${staffOptions}
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-arrow-right-arrow-left"></i> Force Reassign</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- All Requests -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-list-ul" style="color:var(--accent-blue);margin-right:6px"></i>All Department Requests</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>From (On Leave)</th><th>To (Covering)</th><th>Status</th></tr></thead>
+            <tbody>${allRequests || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No requests found.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

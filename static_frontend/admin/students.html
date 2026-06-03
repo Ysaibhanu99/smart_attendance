@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Students — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Use pathname to determine role
+  const role = window.location.pathname.includes('/admin/') ? 'admin' : 'hod';
+  loadComponents(role, 'Manage Students', 'students.html');
+  renderPage(role);
+});
+
+function renderPage(role) {
+  const isHOD = role === 'hod';
+  
+  // Only show department dropdown for Admin
+  const deptSelectHTML = isHOD ? '' : `
+    <div class="form-group">
+      <label class="form-label">Department</label>
+      <select class="form-control" required>
+        <option value="">Select Dept</option>
+        <option value="CSE">CSE</option>
+        <option value="ECE">ECE</option>
+        <option value="MECH">MECH</option>
+        <option value="CIVIL">CIVIL</option>
+      </select>
+    </div>
+  `;
+
+  // Render mock students list
+  const studentRows = APP_DATA.attendanceStudents.map((s, idx) => `
+    <tr id="stu-row-${idx}">
+      <td><strong>${s.name}</strong></td>
+      <td>${s.roll}</td>
+      <td>${isHOD ? 'CSE' : (idx % 2 === 0 ? 'CSE' : 'ECE')}</td>
+      <td><span class="badge badge-success">Active</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" style="color:var(--accent-red)" onclick="removeStudent(${idx}, '${s.name}')">
+          <i class="fa-solid fa-trash"></i> Remove
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Manage Students</h1>
+      <p class="page-subtitle">Add individual students, bulk upload via CSV, or remove records.</p>
+    </div>
+
+    <div class="grid-2" style="margin-bottom: 24px">
+      <!-- Add Individual Student -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-user-plus" style="color:var(--accent-blue);margin-right:6px"></i>Add Individual Student</span>
+        </div>
+        <div class="card-body">
+          <form onsubmit="event.preventDefault(); flashMessage('Student added successfully!', 'success');">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" placeholder="e.g. John Doe" required />
+            </div>
+            <div class="form-group" style="display:flex;gap:12px">
+              <div style="flex:1">
+                <label class="form-label">Roll Number</label>
+                <input type="text" class="form-control" placeholder="e.g. 22BCA001" required />
+              </div>
+              <div style="flex:1">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" placeholder="student@college.edu" required />
+              </div>
+            </div>
+            ${deptSelectHTML}
+            <div class="form-group">
+              <label class="form-label">Select Class/Section</label>
+              <select class="form-control" required>
+                <option value="">Select Class</option>
+                <option value="1st Year - Sec A">1st Year - Sec A</option>
+                <option value="2nd Year - Sec A">2nd Year - Sec A</option>
+                <option value="2nd Year - Sec B">2nd Year - Sec B</option>
+                <option value="3rd Year - Sec A">3rd Year - Sec A</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-plus"></i> Add Student</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Bulk Upload CSV -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-file-csv" style="color:var(--accent-purple);margin-right:6px"></i>Bulk Upload Class (.CSV)</span>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">
+            Upload a CSV file containing RollNo, Name, and Email. The system will automatically create accounts.
+          </p>
+          <form onsubmit="event.preventDefault(); flashMessage('CSV Uploaded! Processing 60 students...', 'success');">
+            ${deptSelectHTML}
+            <div class="form-group">
+              <label class="form-label">Select Class/Section</label>
+              <select class="form-control" required>
+                <option value="">Select Class</option>
+                <option value="2nd Year - Sec A">2nd Year - Sec A</option>
+                <option value="2nd Year - Sec B">2nd Year - Sec B</option>
+                <option value="3rd Year - Sec A">3rd Year - Sec A</option>
+              </select>
+            </div>
+            <div class="form-group" style="border: 2px dashed var(--border); padding: 20px; border-radius: 8px; text-align: center; cursor: pointer; margin-bottom: 16px;" onclick="this.querySelector('input').click()">
+              <i class="fa-solid fa-cloud-arrow-up" style="font-size: 24px; color: var(--text-muted); margin-bottom: 8px;"></i>
+              <div style="font-weight: 600; color: var(--text-primary);">Click to upload CSV</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Maximum file size 5MB</div>
+              <input type="file" accept=".csv" style="opacity:0; position:absolute; width:1px; height:1px;" onchange="flashMessage(this.files[0].name + ' selected.', 'info')" />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;background:var(--accent-purple);border-color:var(--accent-purple)">
+              <i class="fa-solid fa-upload"></i> Upload & Import
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student List & Bulk Remove -->
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="card-title"><i class="fa-solid fa-users" style="color:var(--accent-cyan);margin-right:6px"></i>Current Students</span>
+        
+        <div style="display:flex; gap:12px; align-items:center;">
+          <select id="classToRemove" class="form-control" style="width:180px; padding: 4px 8px; height: 32px; font-size:13px; margin:0;">
+             <option value="">Select Class to Remove</option>
+             <option value="Graduating Batch 2024">Graduating Batch 2024</option>
+             <option value="2nd Year - Sec B">2nd Year - Sec B</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" style="color:white; background:var(--accent-red);" onclick="removeClass()">
+            <i class="fa-solid fa-dumpster"></i> Remove Entire Class
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Roll No</th><th>Department</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>${studentRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// Action Handlers
+window.removeStudent = function(idx, name) {
+  if (confirm('Are you sure you want to permanently remove ' + name + '?')) {
+    const row = document.getElementById('stu-row-' + idx);
+    row.style.opacity = '0.5';
+    row.style.pointerEvents = 'none';
+    flashMessage(name + ' has been removed from the system.', 'success');
+  }
+};
+
+window.removeClass = function() {
+  const select = document.getElementById('classToRemove');
+  if (!select.value) {
+    flashMessage('Please select a class to remove first.', 'warning');
+    return;
+  }
+  
+  if (confirm('CRITICAL WARNING:\\n\\nAre you sure you want to permanently delete ALL students in "' + select.value + '"? This action cannot be undone.')) {
+    flashMessage('Successfully deleted all records for ' + select.value + '.', 'success');
+  }
+};
+</script>
+</body>
+</html>

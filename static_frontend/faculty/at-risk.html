@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>At-Risk Students — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const path = window.location.pathname;
+  let role = 'hod';
+  if (path.includes('/admin/')) role = 'admin';
+  if (path.includes('/faculty/')) role = 'faculty';
+
+  loadComponents(role, 'At-Risk List', 'at-risk.html');
+  renderPage(role);
+});
+
+function renderPage(role) {
+  let tableHeaders = '';
+  let tableRows = '';
+
+  if (role === 'faculty') {
+    tableHeaders = '<tr><th>Student</th><th>Roll No</th><th>Subject</th><th>Attendance</th><th>Classes Left</th><th>Action</th></tr>';
+    tableRows = APP_DATA.defaulters.map((d, idx) => `
+      <tr id="row-${idx}">
+        <td><strong>${d.name}</strong></td>
+        <td>${d.roll}</td>
+        <td>${d.subject}</td>
+        <td>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill danger" style="width:${d.pct}%"></div></div>
+            <span class="progress-pct" style="color:var(--accent-red)">${d.pct}%</span>
+          </div>
+        </td>
+        <td style="color:var(--text-secondary)">${d.left} (Needs ${d.needed})</td>
+        <td><button class="btn btn-primary btn-sm" onclick="sendWarning(${idx}, '${d.name}')"><i class="fa-solid fa-bell"></i> Warn</button></td>
+      </tr>
+    `).join('');
+  } else {
+    tableHeaders = '<tr><th>Student</th><th>Roll No</th><th>Year/Dept</th><th>Subject Issue</th><th>Attendance</th><th>Action</th></tr>';
+    tableRows = APP_DATA.atRiskStudents.map((d, idx) => `
+      <tr id="row-${idx}">
+        <td><strong>${d.name}</strong></td>
+        <td>${d.roll}</td>
+        <td>${d.year} ${role === 'admin' ? 'CSE' : ''}</td>
+        <td>${d.subject}</td>
+        <td>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill danger" style="width:${d.pct}%"></div></div>
+            <span class="progress-pct" style="color:var(--accent-red)">${d.pct}%</span>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="sendWarning(${idx}, '${d.name}')"><i class="fa-solid fa-envelope"></i> Email Parent</button>
+            ${role === 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="flashMessage('Student added to detention list.','warning')">Detain</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">At-Risk Students (<75%)</h1>
+      <p class="page-subtitle">Students facing potential detention due to severe attendance shortages.</p>
+    </div>
+
+    <!-- AI Suggestion Box -->
+    <div class="ai-box" style="margin-bottom:24px">
+      <div class="ai-label"><i class="fa-solid fa-microchip-ai"></i> Intervention Suggested</div>
+      <div class="ai-content">
+        <strong>Rahul Verma</strong> and <strong>Arun Pillai</strong> have dropped below 70% in multiple subjects over the last 2 weeks. 
+        <br><span style="color:var(--text-muted);font-size:12px;display:inline-block;margin-top:4px;">Action: Schedule a mandatory counseling session before mid-terms.</span>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="flashMessage('Counseling emails sent to Rahul and Arun.', 'success')"><i class="fa-solid fa-paper-plane"></i> Send Automated Invite</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="card-title"><i class="fa-solid fa-users-slash" style="color:var(--accent-red);margin-right:6px"></i>Defaulters List</span>
+        <button class="btn btn-ghost btn-sm" onclick="flashMessage('Exporting PDF...', 'info')"><i class="fa-solid fa-download"></i> Export Report</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>${tableHeaders}</thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+window.sendWarning = function(idx, name) {
+  const btn = document.querySelector('#row-' + idx + ' .btn-primary');
+  btn.innerHTML = '<i class="fa-solid fa-check"></i> Warned';
+  btn.style.background = 'var(--accent-green)';
+  btn.style.borderColor = 'var(--accent-green)';
+  btn.disabled = true;
+  flashMessage('Official warning successfully sent to ' + name + '.', 'success');
+};
+</script>
+</body>
+</html>

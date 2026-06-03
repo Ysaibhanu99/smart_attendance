@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Substitute Request — SmartAttend</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+<div id="app"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script src="../js/main.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadComponents('faculty', 'Substitute Request', 'substitute.html');
+  renderPage();
+});
+
+function renderPage() {
+  const user = Session.get() || APP_DATA.session.faculty;
+  const staffOptions = APP_DATA.staffList.filter(s => s.name !== user.name).map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+
+  // Sent requests
+  const myRequests = APP_DATA.substituteRequests.filter(r => r.originalFaculty === user.name).map(r => `
+    <tr>
+      <td>${r.date}</td>
+      <td>Period ${r.period}</td>
+      <td>${r.subject}</td>
+      <td>${r.requestedFaculty}</td>
+      <td><span class="badge badge-${r.status === 'approved' ? 'success' : (r.status === 'pending' ? 'warning' : 'danger')}">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></td>
+    </tr>`).join('');
+
+  // Received requests
+  const requestsForMe = APP_DATA.substituteRequests.filter(r => r.requestedFaculty === user.name).map((r, idx) => `
+    <tr id="req-for-me-${idx}">
+      <td>${r.date}</td>
+      <td>Period ${r.period}</td>
+      <td>${r.subject}</td>
+      <td>${r.originalFaculty}</td>
+      <td class="action-cell">
+        ${r.status === 'pending' ? `
+          <button class="btn btn-primary btn-sm" onclick="handleSubRequest(${idx}, 'approved')"><i class="fa-solid fa-check"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="handleSubRequest(${idx}, 'rejected')" style="color:var(--accent-red)"><i class="fa-solid fa-xmark"></i></button>
+        ` : `<span class="badge badge-${r.status === 'approved' ? 'success' : 'danger'}">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span>`}
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Manage Substitutes</h1>
+      <p class="page-subtitle">Request coverage or accept substitute requests from colleagues.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Request Form -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-paper-plane" style="color:var(--accent-blue);margin-right:6px"></i>New Request</span>
+        </div>
+        <div class="card-body">
+          <form onsubmit="event.preventDefault(); flashMessage('Substitute request sent successfully!', 'success');">
+            <div class="form-group">
+              <label class="form-label">Date</label>
+              <input type="date" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Period</label>
+              <select class="form-control" required>
+                <option value="">Select Period</option>
+                <option value="1">1 (9:00 - 9:50)</option>
+                <option value="2">2 (10:00 - 10:50)</option>
+                <option value="3">3 (11:00 - 11:50)</option>
+                <option value="4">4 (12:00 - 12:50)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input type="text" class="form-control" placeholder="e.g., Data Structures" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Request Coverage From</label>
+              <select class="form-control" required>
+                <option value="">Select Faculty</option>
+                ${staffOptions}
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Send Request</button>
+          </form>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <!-- Requests For Me -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-inbox" style="color:var(--accent-purple);margin-right:6px"></i>Requests For Me</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>From</th><th>Action</th></tr></thead>
+              <tbody>${requestsForMe || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No pending requests for you.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- My Requests -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-cyan);margin-right:6px"></i>My Requests</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>Sent To</th><th>Status</th></tr></thead>
+              <tbody>${myRequests || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">You have not sent any requests.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.handleSubRequest = function(idx, action) {
+  const row = document.getElementById(`req-for-me-${idx}`);
+  const actionCell = row.querySelector('.action-cell');
+  
+  if (action === 'approved') {
+    flashMessage('Substitute Request Accepted!', 'success');
+    actionCell.innerHTML = '<span class="badge badge-success">Approved</span>';
+  } else {
+    flashMessage('Substitute Request Rejected.', 'danger');
+    actionCell.innerHTML = '<span class="badge badge-danger">Rejected</span>';
+  }
+};
+</script>
+</body>
+</html>
