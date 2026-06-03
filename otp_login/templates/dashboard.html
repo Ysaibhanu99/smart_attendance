@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - OTP Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard</h1>
+        <div class="success-message">
+            <h2>Welcome, {{ email }}!</h2>
+            <p>You are verified.</p>
+        </div>
+        
+        <div class="actions">
+            <a href="/logout" class="button">Logout</a>
+        </div>
+    </div>
+</body>
+</html>

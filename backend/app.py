@@ -4,6 +4,9 @@ import psycopg2
 import psycopg2.extras
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from flask_mail import Mail, Message
+import random
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # Load env variables from root or current directory
@@ -19,6 +22,13 @@ if not DATABASE_URL:
 frontend_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static_frontend'))
 app = Flask(__name__, static_folder=frontend_folder, static_url_path='')
 CORS(app)  # Enable CORS for frontend compatibility
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+mail = Mail(app)
 
 @app.route('/')
 def serve_index():
@@ -63,29 +73,40 @@ def db_execute(query, params=None):
         conn.close()
 
 
-# ── 1. AUTHENTICATION ENDPOINT ─────────────────────────────────
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    data = request.json or {}
-    email = data.get('email')
-    password = data.get('password')
+# ── 1. AUTHENTICATION ENDPOINTS ─────────────────────────────────
+def generate_otp():
+    return str(random.randint(100000, 999999))
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
-
-    # Query user details
+# Helper: look up a user by admission number (roll_number) or email
+def find_user_by_identifier(identifier):
+    """Try roll_number first (students), then email (all roles)."""
+    # Check students table for roll_number
     user = db_query("""
-        SELECT u.id, u.name, u.email, u.role, u.avatar, u.password_hash, d.name as dept
+        SELECT u.id, u.name, u.email, u.role, u.avatar, u.password_hash,
+               u.is_registered, d.name as dept, s.roll_number, c.code as class_code
+        FROM students s
+        JOIN users u ON s.user_id = u.id
+        LEFT JOIN departments d ON u.dept_id = d.id
+        LEFT JOIN classes c ON s.class_id = c.id
+        WHERE s.roll_number = %s
+    """, (identifier,), fetchone=True)
+    if user:
+        return user
+
+    # Fallback: check by email (for admin/hod/faculty)
+    user = db_query("""
+        SELECT u.id, u.name, u.email, u.role, u.avatar, u.password_hash,
+               u.is_registered, d.name as dept,
+               NULL as roll_number, NULL as class_code
         FROM users u
         LEFT JOIN departments d ON u.dept_id = d.id
         WHERE u.email = %s
-    """, (email,), fetchone=True)
+    """, (identifier,), fetchone=True)
+    return user
 
-    if not user or user['password_hash'] != password:
-        return jsonify({"error": "Invalid email or password"}), 401
-
-    # Simple session token simulation (just returns user model details)
-    user_data = {
+def build_user_data(user):
+    """Build the JSON-safe user dict from a DB row."""
+    data = {
         "id": user['id'],
         "name": user['name'],
         "email": user['email'],
@@ -93,20 +114,159 @@ def login():
         "dept": user['dept'] or 'All',
         "avatar": user['avatar'] or user['name'][0].upper()
     }
-    
-    # If student, retrieve their roll number and class code
-    if user['role'] == 'student':
-        student_info = db_query("""
-            SELECT s.roll_number, c.code as class_code
-            FROM students s
-            LEFT JOIN classes c ON s.class_id = c.id
-            WHERE s.user_id = %s
-        """, (user['id'],), fetchone=True)
-        if student_info:
-            user_data["roll"] = student_info['roll_number']
-            user_data["class_code"] = student_info['class_code']
+    if user['roll_number']:
+        data["roll"] = user['roll_number']
+    if user['class_code']:
+        data["class_code"] = user['class_code']
+    return data
 
-    return jsonify({"token": f"mock-jwt-token-{user['id']}", "user": user_data})
+
+# ── 1a. LOGIN ───────────────────────────────────────────────────
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.json or {}
+    identifier = data.get('identifier', '').strip()
+    password = data.get('password', '')
+
+    if not identifier or not password:
+        return jsonify({"error": "Admission No / Email and Password are required."}), 400
+
+    user = find_user_by_identifier(identifier)
+    if not user:
+        return jsonify({"error": "Account not found."}), 404
+
+    if not user['is_registered']:
+        return jsonify({"error": "not_registered", "message": "Account exists but is not registered yet. Please register first."}), 403
+
+    if not user['password_hash'] or user['password_hash'] != password:
+        return jsonify({"error": "Invalid password."}), 401
+
+    return jsonify({"token": f"mock-jwt-token-{user['id']}", "user": build_user_data(user)})
+
+
+# ── 1b. REGISTER STEP 1 — Check admission number + email ───────
+@app.route('/api/auth/register/check', methods=['POST'])
+def register_check():
+    data = request.json or {}
+    identifier = data.get('identifier', '').strip()
+    submitted_email = data.get('email', '').strip().lower()
+
+    if not identifier or not submitted_email:
+        return jsonify({"error": "Admission Number and Email are required."}), 400
+
+    user = find_user_by_identifier(identifier)
+    if not user:
+        return jsonify({"error": "Admission number not found in our records."}), 404
+
+    if user['is_registered']:
+        return jsonify({"error": "This account is already registered. Please login."}), 409
+
+    # Verify the submitted email matches the one on record
+    if user['email'].lower() != submitted_email:
+        return jsonify({"error": "Email does not match our records for this admission number."}), 400
+
+    # Found, not registered, email matches → send OTP
+    email = user['email']
+    otp_code = generate_otp()
+    expires_at = datetime.now() + timedelta(minutes=10)
+
+    db_execute(
+        "INSERT INTO otps (email, otp_code, expires_at) VALUES (%s, %s, %s)",
+        (email, otp_code, expires_at)
+    )
+
+    try:
+        msg = Message(subject="Smart Attendance - Registration OTP",
+                      sender=app.config['MAIL_USERNAME'],
+                      recipients=[email])
+        msg.body = f"Your registration OTP for Smart Attendance is: {otp_code}\nIt is valid for 10 minutes."
+        mail.send(msg)
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return jsonify({"error": "Failed to send OTP email. Please try again."}), 500
+
+    # Mask the email for privacy (show first 3 chars + domain)
+    masked = email[:3] + '***@' + email.split('@')[1] if '@' in email else email
+    return jsonify({
+        "success": True,
+        "message": f"OTP sent to {masked}",
+        "email": email  # frontend needs this for the next step
+    })
+
+
+# ── 1c. REGISTER STEP 2 — Verify OTP ───────────────────────────
+@app.route('/api/auth/register/verify_otp', methods=['POST'])
+def register_verify_otp():
+    data = request.json or {}
+    email = data.get('email', '').strip()
+    entered_otp = data.get('otp', '').strip()
+
+    if not email or not entered_otp:
+        return jsonify({"error": "Email and OTP are required."}), 400
+
+    # Demo bypass
+    if entered_otp == '123456':
+        return jsonify({"success": True, "message": "OTP verified."})
+
+    row = db_query(
+        "SELECT otp_code, expires_at, is_used FROM otps WHERE email = %s ORDER BY created_at DESC LIMIT 1",
+        (email,), fetchone=True
+    )
+    if not row:
+        return jsonify({"error": "No OTP found. Please request a new one."}), 400
+    if row['is_used']:
+        return jsonify({"error": "OTP already used."}), 400
+    if datetime.now() > row['expires_at']:
+        return jsonify({"error": "OTP has expired. Please request a new one."}), 400
+    if entered_otp != row['otp_code']:
+        return jsonify({"error": "Wrong OTP."}), 400
+
+    # Mark OTP as used
+    db_execute("UPDATE otps SET is_used = TRUE WHERE email = %s AND otp_code = %s",
+               (email, row['otp_code']))
+
+    return jsonify({"success": True, "message": "OTP verified."})
+
+
+# ── 1d. REGISTER STEP 3 — Set Password ─────────────────────────
+@app.route('/api/auth/register/set_password', methods=['POST'])
+def register_set_password():
+    data = request.json or {}
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters."}), 400
+
+    # Update the user's password and mark as registered
+    db_execute(
+        "UPDATE users SET password_hash = %s, is_registered = TRUE WHERE email = %s",
+        (password, email)
+    )
+
+    # Query full user data to log them in immediately
+    user = db_query("""
+        SELECT u.id, u.name, u.email, u.role, u.avatar, u.is_registered, d.name as dept,
+               s.roll_number, c.code as class_code
+        FROM users u
+        LEFT JOIN departments d ON u.dept_id = d.id
+        LEFT JOIN students s ON s.user_id = u.id
+        LEFT JOIN classes c ON s.class_id = c.id
+        WHERE u.email = %s
+    """, (email,), fetchone=True)
+
+    if not user:
+        return jsonify({"error": "User not found after registration."}), 500
+
+    return jsonify({
+        "success": True,
+        "message": "Registration complete!",
+        "token": f"mock-jwt-token-{user['id']}",
+        "user": build_user_data(user)
+    })
 
 
 # ── 2. NOTIFICATIONS ENDPOINT ──────────────────────────────────

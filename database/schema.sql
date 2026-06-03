@@ -32,10 +32,11 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL, -- Seeded with plain-text or hashed passwords
+    password_hash VARCHAR(255), -- NULL until user registers and sets password
     role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'hod', 'faculty', 'student')),
     dept_id INT REFERENCES departments(id) ON DELETE SET NULL,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    is_registered BOOLEAN DEFAULT FALSE, -- TRUE after OTP verification + password set
     joined_date DATE DEFAULT CURRENT_DATE,
     avatar VARCHAR(5)
 );

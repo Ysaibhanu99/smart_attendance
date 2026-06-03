@@ -19,63 +19,163 @@
       <div class="tagline">Don't just track attendance. Prevent failures.</div>
     </div>
 
-    <h2 class="auth-title">Welcome back</h2>
-    <p class="auth-sub">Sign in to your account</p>
+    <!-- ════════════════════════════════════════════════════════════
+         VIEW 1: LOGIN
+         ════════════════════════════════════════════════════════════ -->
+    <div id="viewLogin">
+      <h2 class="auth-title">Welcome back</h2>
+      <p class="auth-sub">Sign in to your account</p>
 
-    <form id="loginForm" novalidate>
-      <div class="form-group">
-        <label for="email">Email address</label>
-        <div class="input-icon-wrap">
-          <i class="fa-solid fa-envelope"></i>
-          <input type="email" id="email" placeholder="your@email.com" required autocomplete="email" />
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label for="loginIdentifier">Admission No. / Email</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-id-card"></i>
+            <input type="text" id="loginIdentifier" placeholder="e.g. 22BCA001 or admin@college.edu" required autocomplete="username" />
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <div class="input-icon-wrap" style="position:relative">
-          <i class="fa-solid fa-lock"></i>
-          <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password" />
-          <button type="button" class="password-toggle"><i class="fa-solid fa-eye"></i></button>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <div class="input-icon-wrap" style="position:relative">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password" />
+            <button type="button" class="password-toggle"><i class="fa-solid fa-eye"></i></button>
+          </div>
         </div>
+
+        <button type="submit" class="btn-auth" id="btnLogin">
+          <i class="fa-solid fa-right-to-bracket" style="margin-right:6px"></i>
+          Sign In
+        </button>
+      </form>
+
+      <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-secondary)">
+        Not registered?
+        <a href="#" id="showRegister" style="color:var(--accent-blue);font-weight:600;text-decoration:none">Register</a>
+      </p>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         VIEW 2: REGISTER — Step 1: Enter Admission Number
+         ════════════════════════════════════════════════════════════ -->
+    <div id="viewRegister" style="display:none">
+      <h2 class="auth-title">Register</h2>
+      <p class="auth-sub">Enter your Admission Number to get started</p>
+
+      <form id="registerForm" novalidate>
+        <div class="form-group">
+          <label for="regIdentifier">Admission Number</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-id-card"></i>
+            <input type="text" id="regIdentifier" placeholder="e.g. 22BCA001" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-envelope"></i>
+            <input type="email" id="regEmail" placeholder="your@email.com" required autocomplete="email" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="btnRegCheck">
+          <i class="fa-solid fa-paper-plane" style="margin-right:6px"></i>
+          Send OTP
+        </button>
+      </form>
+
+      <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-secondary)">
+        Already registered?
+        <a href="#" id="showLogin" style="color:var(--accent-blue);font-weight:600;text-decoration:none">Login</a>
+      </p>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         VIEW 3: REGISTER — Step 2: Enter OTP
+         ════════════════════════════════════════════════════════════ -->
+    <div id="viewOtp" style="display:none">
+      <h2 class="auth-title">Verify OTP</h2>
+      <p class="auth-sub" id="otpSubtext">Enter the 6-digit OTP sent to your email</p>
+
+      <form id="otpForm" novalidate>
+        <div class="form-group">
+          <label for="regOtp">One-Time Password</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-key"></i>
+            <input type="text" id="regOtp" placeholder="Enter 6-digit OTP" maxlength="6" required />
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:6px">OTP is valid for 10 minutes.</div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="btnVerifyOtp">
+          <i class="fa-solid fa-check-circle" style="margin-right:6px"></i>
+          Verify OTP
+        </button>
+      </form>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         VIEW 4: REGISTER — Step 3: Set Password
+         ════════════════════════════════════════════════════════════ -->
+    <div id="viewSetPassword" style="display:none">
+      <h2 class="auth-title">Set Password</h2>
+      <p class="auth-sub">Create a password for your account</p>
+
+      <form id="setPasswordForm" novalidate>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <div class="input-icon-wrap" style="position:relative">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="newPassword" placeholder="At least 6 characters" required minlength="6" />
+            <button type="button" class="password-toggle"><i class="fa-solid fa-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="confirmPassword" placeholder="Re-enter password" required minlength="6" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="btnSetPassword">
+          <i class="fa-solid fa-user-check" style="margin-right:6px"></i>
+          Complete Registration
+        </button>
+      </form>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         QUICK DEMO LOGINS
+         ════════════════════════════════════════════════════════════ -->
+    <div id="demoSection">
+      <div class="auth-divider"><span>Quick Demo Logins</span></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="demo-fill" data-identifier="principal@college.edu" data-pass="admin123"
+          style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Super Admin</div>
+          <div style="font-size:12px;color:var(--text-primary);margin-top:2px">principal@college.edu</div>
+        </button>
+        <button class="demo-fill" data-identifier="hod.cse@college.edu" data-pass="admin123"
+          style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">HOD</div>
+          <div style="font-size:12px;color:var(--text-primary);margin-top:2px">hod.cse@college.edu</div>
+        </button>
+        <button class="demo-fill" data-identifier="john@cse.edu" data-pass="admin123"
+          style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Faculty</div>
+          <div style="font-size:12px;color:var(--text-primary);margin-top:2px">john@cse.edu</div>
+        </button>
+        <button class="demo-fill" data-identifier="rahul@cse.edu" data-pass="admin123"
+          style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
+          <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Student</div>
+          <div style="font-size:12px;color:var(--text-primary);margin-top:2px">rahul@cse.edu</div>
+        </button>
       </div>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;margin-top:-8px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);text-transform:none;letter-spacing:0;cursor:pointer">
-          <input type="checkbox" id="remember" style="width:auto;accent-color:var(--accent-blue)" />
-          Remember me
-        </label>
-      </div>
-
-      <button type="submit" class="btn-auth">
-        <i class="fa-solid fa-right-to-bracket" style="margin-right:6px"></i>
-        Sign In
-      </button>
-    </form>
-
-    <div class="auth-divider"><span>Quick Demo Logins</span></div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="demo-fill" data-email="principal@college.edu" data-pass="admin123"
-        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Super Admin</div>
-        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">principal@college.edu</div>
-      </button>
-      <button class="demo-fill" data-email="hod.cse@college.edu" data-pass="admin123"
-        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">HOD</div>
-        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">hod.cse@college.edu</div>
-      </button>
-      <button class="demo-fill" data-email="john@cse.edu" data-pass="admin123"
-        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Faculty</div>
-        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">john@cse.edu</div>
-      </button>
-      <button class="demo-fill" data-email="rahul@cse.edu" data-pass="admin123"
-        style="padding:10px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s">
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Student</div>
-        <div style="font-size:12px;color:var(--text-primary);margin-top:2px">rahul@cse.edu</div>
-      </button>
     </div>
 
   </div>
