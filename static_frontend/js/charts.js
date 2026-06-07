@@ -7,17 +7,17 @@
 function applyChartDefaults() {
   if (typeof Chart === 'undefined') return;
 
-  Chart.defaults.color = '#8b8fa8';
-  Chart.defaults.borderColor = '#2a2d3a';
+  Chart.defaults.color = '#64748b';
+  Chart.defaults.borderColor = '#e5e7eb';
   Chart.defaults.font.family = 'DM Sans';
   Chart.defaults.font.size = 12;
   Chart.defaults.plugins.legend.labels.boxWidth = 12;
   Chart.defaults.plugins.legend.labels.padding = 16;
-  Chart.defaults.plugins.tooltip.backgroundColor = '#1c1f2a';
-  Chart.defaults.plugins.tooltip.borderColor = '#2a2d3a';
+  Chart.defaults.plugins.tooltip.backgroundColor = '#ffffff';
+  Chart.defaults.plugins.tooltip.borderColor = '#e5e7eb';
   Chart.defaults.plugins.tooltip.borderWidth = 1;
-  Chart.defaults.plugins.tooltip.titleColor = '#e8eaf0';
-  Chart.defaults.plugins.tooltip.bodyColor = '#8b8fa8';
+  Chart.defaults.plugins.tooltip.titleColor = '#1e293b';
+  Chart.defaults.plugins.tooltip.bodyColor = '#64748b';
   Chart.defaults.plugins.tooltip.padding = 10;
   Chart.defaults.plugins.tooltip.cornerRadius = 8;
 }
@@ -54,12 +54,12 @@ function renderAttendanceTrendChart(canvasId, labels, datasets) {
       },
       scales: {
         x: {
-          grid: { color: '#2a2d3a' },
+          grid: { color: '#e5e7eb' },
           ticks: { maxRotation: 0 }
         },
         y: {
           min: 0, max: 100,
-          grid: { color: '#2a2d3a' },
+          grid: { color: '#e5e7eb' },
           ticks: {
             callback: val => val + '%'
           }
@@ -114,7 +114,7 @@ function renderSubjectBarChart(canvasId, labels, data, thresholds) {
         x: { grid: { display: false } },
         y: {
           min: 0, max: 100,
-          grid: { color: '#2a2d3a' },
+          grid: { color: '#e5e7eb' },
           ticks: { callback: val => val + '%' }
         }
       }
@@ -150,7 +150,7 @@ function renderDeptComparisonChart(canvasId, labels, data) {
       scales: {
         x: {
           min: 0, max: 100,
-          grid: { color: '#2a2d3a' },
+          grid: { color: '#e5e7eb' },
           ticks: { callback: val => val + '%' }
         },
         y: { grid: { display: false } }
@@ -219,7 +219,7 @@ function renderWeeklyBarChart(canvasId, data) {
         x: { grid: { display: false } },
         y: {
           min: 0, max: 100,
-          grid: { color: '#2a2d3a' },
+          grid: { color: '#e5e7eb' },
           ticks: { callback: val => val + '%' }
         }
       }
@@ -253,10 +253,10 @@ function renderFacultyTrendChart(canvasId, labels, data) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: '#2a2d3a' } },
+        x: { grid: { color: '#e5e7eb' } },
         y: {
           min: 50, max: 100,
-          grid: { color: '#2a2d3a' },
+          grid: { color: '#e5e7eb' },
           ticks: { callback: val => val + '%' }
         }
       }
@@ -288,7 +288,7 @@ function renderSemesterProgressChart(canvasId, labels, studentData, avgData) {
         {
           label: 'Class Average',
           data: avgData,
-          borderColor: '#8b8fa8',
+          borderColor: '#64748b',
           borderWidth: 1.5,
           borderDash: [5, 5],
           pointRadius: 0,
@@ -303,10 +303,10 @@ function renderSemesterProgressChart(canvasId, labels, studentData, avgData) {
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { position: 'top' } },
       scales: {
-        x: { grid: { color: '#2a2d3a' } },
+        x: { grid: { color: '#e5e7eb' } },
         y: {
           min: 0, max: 100,
-          grid: { color: '#2a2d3a' },
+          grid: { color: '#e5e7eb' },
           ticks: { callback: val => val + '%' }
         }
       }

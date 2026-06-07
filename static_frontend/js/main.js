@@ -3,36 +3,6 @@
    Global utilities, sidebar, tabs, toasts, modals
    ============================================================ */
 
-/* ── SIDEBAR TOGGLE (mobile) ─────────────────────────────── */
-function initSidebar() {
-  const toggle = document.getElementById('sidebarToggle');
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-
-  if (!toggle || !sidebar) return;
-
-  toggle.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
-    if (overlay) overlay.classList.toggle('show');
-  });
-
-  if (overlay) {
-    overlay.addEventListener('click', () => {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('show');
-    });
-  }
-
-  // Set active nav item based on URL
-  const links = sidebar.querySelectorAll('.nav-item');
-  const path = window.location.pathname;
-  links.forEach(link => {
-    if (link.getAttribute('href') && path.startsWith(link.getAttribute('href'))) {
-      link.classList.add('active');
-    }
-  });
-}
-
 /* ── TABS ────────────────────────────────────────────────── */
 function initTabs(containerSelector) {
   const containers = document.querySelectorAll(containerSelector || '.tabs-container');
@@ -309,8 +279,8 @@ function loadAIInsight(containerId, endpoint, payload = {}) {
 
 /* ── CHART THEME DEFAULTS ─────────────────────────────────── */
 const chartDefaults = {
-  color: '#8b8fa8',
-  borderColor: '#2a2d3a',
+  color: '#64748b',
+  borderColor: '#e5e7eb',
   backgroundColor: 'transparent',
   font: { family: 'DM Sans', size: 12 }
 };
@@ -328,7 +298,7 @@ function getChartColors() {
 
 /* ── INIT ON DOM READY ────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-  initSidebar();
+  // initSidebar handled by components.js loadComponents()
   initTabs();
   initModals();
   initAlerts();

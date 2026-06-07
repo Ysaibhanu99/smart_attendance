@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -12,16 +12,18 @@
 <div id="app"></div>
 
 <script src="../js/data.js"></script>
+<script src="../js/api.js"></script>
 <script src="../js/components.js"></script>
 <script src="../js/main.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const path = window.location.pathname;
   let role = 'hod';
   if (path.includes('/admin/')) role = 'admin';
   if (path.includes('/faculty/')) role = 'faculty';
 
   loadComponents(role, 'At-Risk List', 'at-risk.html');
+  await API.init(['stats', 'notifications']);
   renderPage(role);
 });
 

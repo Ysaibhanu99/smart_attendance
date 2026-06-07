@@ -3,6 +3,8 @@
    4-view state machine: Login → Register → OTP → Set Password
    ============================================================ */
 
+const BASE_URL = 'http://127.0.0.1:5000';
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── DOM References ──────────────────────────────────────────
@@ -19,8 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!loginForm) return; // Not on login page
 
-  // State: tracks the email discovered during registration
+  // State: tracks the email and identifier discovered during registration
   let regEmail = '';
+  let regIdentifier = '';
 
   // ── View Switcher ───────────────────────────────────────────
   function showView(view) {
@@ -81,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Signing in...';
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(BASE_URL + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier, password })
@@ -130,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Checking...';
 
     try {
-      const res = await fetch('/api/auth/register/check', {
+      const res = await fetch(BASE_URL + '/api/auth/register/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier, email })
@@ -139,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (res.ok) {
         regEmail = data.email;
+        regIdentifier = identifier;
         document.getElementById('otpSubtext').textContent = data.message;
         showView(viewOtp);
       } else {
@@ -166,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
 
     try {
-      const res = await fetch('/api/auth/register/verify_otp', {
+      const res = await fetch(BASE_URL + '/api/auth/register/verify_otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: regEmail, otp })
@@ -203,10 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Completing...';
 
     try {
-      const res = await fetch('/api/auth/register/set_password', {
+      const res = await fetch(BASE_URL + '/api/auth/register/set_password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: regEmail, password })
+        body: JSON.stringify({ identifier: regIdentifier, email: regEmail, password })
       });
       const data = await res.json();
 
@@ -236,7 +240,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Helpers ─────────────────────────────────────────────────
   function showError(msg) {
     // Find the currently visible view's form
-    const activeForm = document.querySelector('[id^="view"]:not([style*="display: none"]) form, [id^="view"]:not([style*="display:none"]) form');
+    const views = [viewLogin, viewRegister, viewOtp, viewSetPassword];
+    let activeForm = null;
+    for (const v of views) {
+      if (v && v.style.display !== 'none') {
+        activeForm = v.querySelector('form');
+        break;
+      }
+    }
     if (!activeForm) return;
 
     let err = activeForm.querySelector('.form-error');

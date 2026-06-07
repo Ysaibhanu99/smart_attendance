@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS subjects CASCADE;
 DROP TABLE IF EXISTS students CASCADE;
 DROP TABLE IF EXISTS classes CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS minors CASCADE;
 DROP TABLE IF EXISTS departments CASCADE;
 
 -- 1. Departments Table
@@ -24,6 +25,14 @@ CREATE TABLE departments (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     hod_id INT -- Foreign key to users(id) to be added after users table is created
+);
+
+-- 1a. Minors Table
+-- Represents minors offered by specific major departments
+CREATE TABLE minors (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    dept_id INT REFERENCES departments(id) ON DELETE CASCADE
 );
 
 -- 2. Users Table
@@ -63,7 +72,8 @@ CREATE TABLE classes (
 CREATE TABLE students (
     user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     roll_number VARCHAR(20) UNIQUE NOT NULL,
-    class_id INT REFERENCES classes(id) ON DELETE SET NULL
+    class_id INT REFERENCES classes(id) ON DELETE SET NULL,
+    minor_id INT REFERENCES minors(id) ON DELETE SET NULL
 );
 
 -- 5. Subjects Table

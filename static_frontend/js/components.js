@@ -117,7 +117,7 @@ function buildSidebar(role, activePath) {
 
 /* ── BUILD TOPBAR HTML ───────────────────────────────────── */
 function buildTopbar(pageTitle, role) {
-  const userNotifications = APP_DATA.notifications.filter(n => n.recipient === role) || [];
+  const userNotifications = APP_DATA.notifications || [];
   const showBadge = userNotifications.length > 0;
   
   let notifHTML = '';

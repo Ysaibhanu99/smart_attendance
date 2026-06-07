@@ -2,6 +2,7 @@ import os
 import sys
 import psycopg2
 import psycopg2.extras
+import json
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_mail import Mail, Message
@@ -161,12 +162,13 @@ def register_check():
     if user['is_registered']:
         return jsonify({"error": "This account is already registered. Please login."}), 409
 
-    # Verify the submitted email matches the one on record
-    if user['email'].lower() != submitted_email:
-        return jsonify({"error": "Email does not match our records for this admission number."}), 400
+    # Check if the submitted email is already in use by another user
+    existing_email_user = db_query("SELECT id FROM users WHERE email = %s AND id != %s", (submitted_email, user['id']), fetchone=True)
+    if existing_email_user:
+        return jsonify({"error": "This email is already in use by another account."}), 400
 
-    # Found, not registered, email matches → send OTP
-    email = user['email']
+    # Found, not registered, email is available → send OTP
+    email = submitted_email
     otp_code = generate_otp()
     expires_at = datetime.now() + timedelta(minutes=10)
 
@@ -232,19 +234,24 @@ def register_verify_otp():
 @app.route('/api/auth/register/set_password', methods=['POST'])
 def register_set_password():
     data = request.json or {}
+    identifier = data.get('identifier', '').strip()
     email = data.get('email', '').strip()
     password = data.get('password', '').strip()
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required."}), 400
+    if not identifier or not email or not password:
+        return jsonify({"error": "Identifier, email, and password are required."}), 400
 
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters."}), 400
 
-    # Update the user's password and mark as registered
+    user = find_user_by_identifier(identifier)
+    if not user:
+        return jsonify({"error": "Account not found."}), 404
+
+    # Update the user's password, email, and mark as registered
     db_execute(
-        "UPDATE users SET password_hash = %s, is_registered = TRUE WHERE email = %s",
-        (password, email)
+        "UPDATE users SET password_hash = %s, email = %s, is_registered = TRUE WHERE id = %s",
+        (password, email, user['id'])
     )
 
     # Query full user data to log them in immediately
@@ -416,11 +423,55 @@ def get_departments():
     departments = db_query("""
         SELECT d.id, d.name, u.name as hod, 
                (SELECT COUNT(*) FROM students s WHERE s.class_id IN (SELECT id FROM classes WHERE dept_id = d.id)) as students,
-               (SELECT COUNT(*) FROM users WHERE dept_id = d.id AND role = 'faculty') as faculty
+               (SELECT COUNT(*) FROM users WHERE dept_id = d.id AND role = 'faculty') as faculty,
+               COALESCE((SELECT ROUND(AVG(CASE WHEN sa.status = 'present' THEN 100 ELSE 0 END), 1)
+                         FROM student_attendance sa
+                         JOIN users u2 ON sa.student_id = u2.id
+                         WHERE u2.dept_id = d.id), 0) as avg,
+               COALESCE((SELECT COUNT(DISTINCT sub.student_id) FROM (
+                   SELECT sa2.student_id,
+                          (COUNT(CASE WHEN sa2.status = 'present' THEN 1 END) * 100.0 / COUNT(*)) as pct
+                   FROM student_attendance sa2
+                   JOIN users u3 ON sa2.student_id = u3.id
+                   WHERE u3.dept_id = d.id
+                   GROUP BY sa2.student_id
+               ) sub WHERE sub.pct < 75), 0) as at_risk
         FROM departments d
         LEFT JOIN users u ON d.hod_id = u.id
     """)
+
+    # Attach minors to each department
+    minors = db_query("SELECT id, name, dept_id FROM minors")
+    for d in departments:
+        d['minors'] = [m for m in minors if m['dept_id'] == d['id']]
+
     return jsonify(departments)
+
+@app.route('/api/minors/enroll', methods=['POST'])
+def enroll_minor():
+    data = request.json or {}
+    roll_number = data.get('roll_number', '').strip()
+    minor_id = data.get('minor_id')
+    hod_id = data.get('hod_id') # User ID of the HOD making the request
+    
+    if not roll_number or not minor_id or not hod_id:
+        return jsonify({"error": "Roll number, minor ID, and HOD ID are required."}), 400
+        
+    student = db_query("SELECT user_id FROM students WHERE roll_number = %s", (roll_number,), fetchone=True)
+    if not student:
+        return jsonify({"error": "Student not found with that Admission Number."}), 404
+        
+    minor = db_query("SELECT dept_id FROM minors WHERE id = %s", (minor_id,), fetchone=True)
+    if not minor:
+        return jsonify({"error": "Minor not found."}), 404
+        
+    # Verify the HOD controls the major department that offers this minor
+    dept = db_query("SELECT id FROM departments WHERE id = %s AND hod_id = %s", (minor['dept_id'], hod_id), fetchone=True)
+    if not dept:
+        return jsonify({"error": "You do not have permission to enroll students in this minor."}), 403
+        
+    db_execute("UPDATE students SET minor_id = %s WHERE roll_number = %s", (minor_id, roll_number))
+    return jsonify({"success": True, "message": "Student successfully enrolled in the minor!"})
 
 @app.route('/api/users', methods=['GET'])
 def get_users():
@@ -444,7 +495,7 @@ def get_holidays():
 # ── 5. ATTENDANCE ENDPOINTS ────────────────────────────────────
 @app.route('/api/attendance/classes', methods=['GET'])
 def get_faculty_classes():
-    faculty_id = request.args.get('faculty_id')
+    faculty_id = request.args.get('user_id')
     classes = db_query("""
         SELECT c.id, c.code, c.label, s.name as subject, s.id as subject_id
         FROM class_subjects cs
@@ -535,7 +586,7 @@ def submit_attendance():
 # ── 6. MARKS ENDPOINTS ─────────────────────────────────────────
 @app.route('/api/marks/classes', methods=['GET'])
 def get_marks_classes():
-    faculty_id = request.args.get('faculty_id')
+    faculty_id = request.args.get('user_id')
     # Returns classes, subjects and published exams summary
     classes = db_query("""
         SELECT c.id as class_id, c.label, s.name as subject, s.id as subject_id, s.max_marks

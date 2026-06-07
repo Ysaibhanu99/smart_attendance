@@ -13,12 +13,14 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="../js/data.js"></script>
+<script src="../js/api.js"></script>
 <script src="../js/components.js"></script>
 <script src="../js/main.js"></script>
 <script src="../js/charts.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   loadComponents('hod', 'HOD Dashboard', 'dashboard.html');
+  await API.init(['stats', 'leaves', 'notifications']);
   renderPage();
 });
 
@@ -105,6 +107,26 @@ function renderPage() {
         <tbody>${leaveRows}</tbody></table>
       </div>
     </div>
+
+    <!-- Minor Enrollment Card -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-header"><span class="card-title"><i class="fa-solid fa-plus-circle" style="color:var(--accent-blue);margin-right:6px"></i>Enroll Student in Minor</span></div>
+      <div class="card-body">
+        <form id="enrollMinorForm" style="display:flex; gap:15px; align-items:flex-end;" onsubmit="enrollStudentInMinor(event)">
+          <div class="form-group" style="margin-bottom:0; flex:1;">
+            <label>Admission Number</label>
+            <input type="text" id="minorRollNum" placeholder="e.g. 24BSC001" required>
+          </div>
+          <div class="form-group" style="margin-bottom:0; flex:1;">
+            <label>Select Minor</label>
+            <select id="minorSelect" required>
+              <option value="" disabled selected>Loading minors...</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" id="btnEnrollMinor">Enroll Student</button>
+        </form>
+      </div>
+    </div>
   `;
 
   applyChartDefaults();
@@ -119,6 +141,69 @@ function addAttendance(i, reason) {
     document.getElementById(`leaveAction${i}`).innerHTML = `<span class="badge badge-primary">Attendance Added (${reason})</span>`;
     showToast(`Attendance marked based on ${reason} leave.`, 'success');
   });
+}
+
+// Fetch and populate minors for the HOD's department
+async function loadMinors() {
+  try {
+    const res = await fetch(BASE_URL + '/api/departments');
+    const depts = await res.json();
+    const user = API.user() || {};
+    const myDept = depts.find(d => d.name === user.dept);
+    
+    const select = document.getElementById('minorSelect');
+    if (myDept && myDept.minors && myDept.minors.length > 0) {
+      select.innerHTML = '<option value="" disabled selected>Select Minor</option>' + 
+        myDept.minors.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    } else {
+      select.innerHTML = '<option value="" disabled selected>No minors offered by your department</option>';
+      document.getElementById('btnEnrollMinor').disabled = true;
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('minorSelect').innerHTML = '<option value="" disabled selected>Failed to load minors</option>';
+  }
+}
+
+// Ensure loadMinors is called when the page renders
+const originalRenderPage = renderPage;
+renderPage = function() {
+  originalRenderPage();
+  loadMinors();
+};
+
+async function enrollStudentInMinor(e) {
+  e.preventDefault();
+  const rollNumber = document.getElementById('minorRollNum').value.trim();
+  const minorId = document.getElementById('minorSelect').value;
+  const btn = document.getElementById('btnEnrollMinor');
+  const user = API.user() || {};
+  
+  if (!minorId) return showError('Please select a minor.');
+  
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enrolling...';
+  
+  try {
+    const res = await fetch(BASE_URL + '/api/minors/enroll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roll_number: rollNumber, minor_id: minorId, hod_id: user.id })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      showToast(data.message, 'success');
+      document.getElementById('minorRollNum').value = '';
+    } else {
+      showError(data.error || 'Failed to enroll student.');
+    }
+  } catch (err) {
+    showError('Network error connecting to backend.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Enroll Student';
+  }
 }
 </script>
 </body>

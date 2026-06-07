@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -12,13 +12,15 @@
 <div id="app"></div>
 
 <script src="../js/data.js"></script>
+<script src="../js/api.js"></script>
 <script src="../js/components.js"></script>
 <script src="../js/main.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Use pathname to determine role
   const role = window.location.pathname.includes('/admin/') ? 'admin' : 'hod';
   loadComponents(role, 'Manage Students', 'students.html');
+  await API.init(['users', 'notifications']);
   renderPage(role);
 });
 

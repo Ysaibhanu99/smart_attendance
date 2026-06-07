@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -12,11 +12,13 @@
 <div id="app"></div>
 
 <script src="../js/data.js"></script>
+<script src="../js/api.js"></script>
 <script src="../js/components.js"></script>
 <script src="../js/main.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   loadComponents('faculty', 'Mark Attendance', 'mark-attendance.html');
+  await API.init(['attendance_classes', 'notifications']);
   renderPage();
 });
 
@@ -157,15 +159,41 @@ function submitAttendance() {
     ? 'Submit with ALL students marked Present?'
     : `Submit? ${absent} student(s) will be marked Absent.`;
 
-  confirmAction(msg, () => {
+  confirmAction(msg, async () => {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...';
-    // Simulate API call
-    setTimeout(() => {
-      showToast('Attendance submitted successfully!', 'success');
-      setTimeout(() => window.location.href = 'dashboard.html', 1200);
-    }, 800);
+
+    const u = API.user();
+    const records = Object.entries(attendanceState).map(([student_id, status]) => ({
+      student_id: parseInt(student_id),
+      status
+    }));
+
+    try {
+      const result = await API.submitAttendance({
+        class_id: APP_DATA.todaysClasses[0]?.id || null,
+        subject_id: APP_DATA.todaysClasses[0]?.subject_id || null,
+        faculty_id: u.id,
+        date: document.getElementById('sessionDate').value,
+        period: parseInt(document.getElementById('periodSelect').value),
+        time_slot: '9:00-9:50',
+        records
+      });
+
+      if (result.success) {
+        showToast('Attendance submitted successfully!', 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 1200);
+      } else {
+        showToast(result.error || 'Failed to submit attendance.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Attendance';
+      }
+    } catch (err) {
+      showToast('Network error. Please try again.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Attendance';
+    }
   });
 }
 </script>
